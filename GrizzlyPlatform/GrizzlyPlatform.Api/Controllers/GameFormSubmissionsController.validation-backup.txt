@@ -1,0 +1,252 @@
+using GrizzlyPlatform.Api.Data;
+using GrizzlyPlatform.Api.Models;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+namespace GrizzlyPlatform.Api.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class GameFormSubmissionsController : ControllerBase
+{
+    private readonly GrizzlyDbContext _context;
+
+    public GameFormSubmissionsController(GrizzlyDbContext context)
+    {
+        _context = context;
+    }
+
+    // GET: api/GameFormSubmissions
+    [HttpGet]
+    public async Task<IActionResult> GetSubmissions()
+    {
+        var submissions = await _context.GameFormSubmissions
+            .Include(s => s.GameForm)
+            .Include(s => s.Match)
+            .Include(s => s.Team)
+            .Include(s => s.Answers)
+            .ToListAsync();
+
+        return Ok(submissions);
+    }
+
+    // POST: api/GameFormSubmissions
+    // Submit an entire scouting form in one request.
+    [HttpPost]
+    public async Task<IActionResult> CreateSubmission(
+        GameFormSubmissionRequest request)
+    {
+        // Verify the game form exists.
+        var gameForm = await _context.GameForms
+            .Include(f => f.Fields)
+            .FirstOrDefaultAsync(f => f.Id == request.GameFormId);
+
+        if (gameForm == null)
+        {
+            return BadRequest("The specified game form does not exist.");
+        }
+
+        // Verify the match exists.
+        var match = await _context.Matches
+            .FindAsync(request.MatchId);
+
+        if (match == null)
+        {
+            return BadRequest("The specified match does not exist.");
+        }
+
+        // Verify the team exists.
+        var team = await _context.Teams
+            .FindAsync(request.TeamId);
+
+        if (team == null)
+        {
+            return BadRequest("The specified team does not exist.");
+        }
+
+        // Make sure the same field isn't answered twice.
+        var duplicateFields = request.Answers
+            .GroupBy(a => a.GameFormFieldId)
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToList();
+
+        if (duplicateFields.Count > 0)
+        {
+            return BadRequest(new
+            {
+                message = "A field cannot be answered more than once.",
+                duplicateFieldIds = duplicateFields
+            });
+        }
+
+        // Verify every submitted field belongs to this form.
+        var formFieldIds = gameForm.Fields
+            .Select(f => f.Id)
+            .ToHashSet();
+
+        var invalidFields = request.Answers
+            .Where(a => !formFieldIds.Contains(a.GameFormFieldId))
+            .Select(a => a.GameFormFieldId)
+            .ToList();
+
+        if (invalidFields.Count > 0)
+        {
+            return BadRequest(new
+            {
+                message = "One or more answers reference fields that do not belong to this form.",
+                invalidFieldIds = invalidFields
+            });
+        }
+
+        // Verify required fields have an answer.
+        var answeredFieldIds = request.Answers
+            .Select(a => a.GameFormFieldId)
+            .ToHashSet();
+
+        var missingRequiredFields = gameForm.Fields
+            .Where(f => f.Required && !answeredFieldIds.Contains(f.Id))
+            .Select(f => new
+            {
+                f.Id,
+                f.Question
+            })
+            .ToList();
+
+        if (missingRequiredFields.Count > 0)
+        {
+            return BadRequest(new
+            {
+                message = "One or more required fields are missing.",
+                missingRequiredFields
+            });
+        }
+
+        // Create the submission.
+        var submission = new GameFormSubmission
+        {
+            GameFormId = request.GameFormId,
+            MatchId = request.MatchId,
+            TeamId = request.TeamId,
+            SubmittedAt = DateTime.UtcNow
+        };
+
+        // Add all answers to the submission.
+        foreach (var answerRequest in request.Answers)
+        {
+            submission.Answers.Add(new GameFormAnswer
+            {
+                GameFormFieldId = answerRequest.GameFormFieldId,
+                Value = answerRequest.Value
+            });
+        }
+
+        _context.GameFormSubmissions.Add(submission);
+
+        await _context.SaveChangesAsync();
+
+        return CreatedAtAction(
+            nameof(GetSubmission),
+            new { id = submission.Id },
+            new
+            {
+                submission.Id,
+                submission.GameFormId,
+                submission.MatchId,
+                submission.TeamId,
+                submission.SubmittedAt,
+                answers = submission.Answers.Select(a => new
+                {
+                    a.Id,
+                    a.GameFormFieldId,
+                    a.Value
+                })
+            });
+    }
+
+    // GET: api/GameFormSubmissions/{id}
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetSubmission(int id)
+    {
+        var submission = await _context.GameFormSubmissions
+            .Include(s => s.GameForm)
+            .Include(s => s.Match)
+            .Include(s => s.Team)
+            .Include(s => s.Answers)
+                .ThenInclude(a => a.GameFormField)
+            .FirstOrDefaultAsync(s => s.Id == id);
+
+        if (submission == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(new
+        {
+            submission.Id,
+            submission.GameFormId,
+            submission.MatchId,
+            submission.TeamId,
+            submission.SubmittedAt,
+
+            gameForm = submission.GameForm,
+            match = submission.Match,
+            team = submission.Team,
+
+            answers = submission.Answers.Select(a => new
+            {
+                a.Id,
+                a.GameFormSubmissionId,
+                a.GameFormFieldId,
+                question = a.GameFormField!.Question,
+                fieldType = a.GameFormField.FieldType,
+                a.Value
+            })
+        });
+    }
+
+    // POST: api/GameFormSubmissions/{submissionId}/answers
+    // Kept for compatibility with the existing API.
+    [HttpPost("{submissionId}/answers")]
+    public async Task<IActionResult> CreateAnswer(
+        int submissionId,
+        GameFormAnswer answer)
+    {
+        var submission = await _context.GameFormSubmissions
+            .FindAsync(submissionId);
+
+        if (submission == null)
+        {
+            return NotFound(
+                "The specified submission does not exist.");
+        }
+
+        var field = await _context.GameFormFields
+            .FindAsync(answer.GameFormFieldId);
+
+        if (field == null)
+        {
+            return NotFound(
+                "The specified game form field does not exist.");
+        }
+
+        if (field.GameFormId != submission.GameFormId)
+        {
+            return BadRequest(
+                "The field does not belong to the submission's game form.");
+        }
+
+        answer.GameFormSubmissionId = submissionId;
+
+        _context.GameFormAnswers.Add(answer);
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            answer.Id,
+            answer.GameFormSubmissionId,
+            answer.GameFormFieldId,
+            answer.Value
+        });
+    }
+}

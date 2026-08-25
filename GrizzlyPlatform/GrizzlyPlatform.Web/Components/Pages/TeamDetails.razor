@@ -1,0 +1,129 @@
+@page "/teams/{TeamId:int}"
+@rendermode InteractiveServer
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageTitle>Team Details</PageTitle>
+
+@if (team == null)
+{
+    <p>Loading team...</p>
+}
+else
+{
+    <h1>Team @team.TeamNumber</h1>
+
+    <h2>@team.Name</h2>
+
+    <p>
+        <strong>Location:</strong>
+        @team.Location
+    </p>
+
+    <hr />
+
+    <h2>Events</h2>
+
+    @if (events.Count == 0)
+    {
+        <p>This team is not registered for any events.</p>
+    }
+    else
+    {
+        <div class="team-events">
+            @foreach (var eventItem in events)
+            {
+                <div class="event-card">
+                    <h3>@eventItem.Name</h3>
+
+                    <p>
+                        <strong>Location:</strong>
+                        @eventItem.Location
+                    </p>
+
+                    <p>
+                        <strong>Season:</strong>
+                        @eventItem.Season?.Year
+                        @eventItem.Season?.Name
+                    </p>
+                </div>
+            }
+        </div>
+    }
+
+    <hr />
+
+    <h2>Scouting</h2>
+
+    <p>
+        Scouting data will appear here once scouting is enabled
+        for this team.
+    </p>
+
+    <button @onclick="GoBack">
+        Back
+    </button>
+}
+
+@code {
+    [Parameter]
+    public int TeamId { get; set; }
+
+    private TeamModel? team;
+    private List<EventModel> events = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        team = await Http.GetFromJsonAsync<TeamModel>(
+            $"api/teams/{TeamId}");
+
+        if (team != null)
+        {
+            var eventTeams =
+                await Http.GetFromJsonAsync<List<EventTeamModel>>(
+                    $"api/eventteams");
+
+            events = eventTeams?
+                .Where(et => et.TeamId == TeamId)
+                .Select(et => et.EventInfo)
+                .Where(e => e != null)
+                .ToList() ?? new();
+        }
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/events");
+    }
+
+    public class TeamModel
+    {
+        public int Id { get; set; }
+        public int TeamNumber { get; set; }
+        public string Name { get; set; } = "";
+        public string Location { get; set; } = "";
+    }
+
+    public class EventTeamModel
+    {
+        public int Id { get; set; }
+        public int EventId { get; set; }
+        public int TeamId { get; set; }
+        public EventModel EventInfo { get; set; } = new();
+    }
+
+    public class EventModel
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+        public string Location { get; set; } = "";
+        public SeasonModel? Season { get; set; }
+    }
+
+    public class SeasonModel
+    {
+        public int Id { get; set; }
+        public int Year { get; set; }
+        public string Name { get; set; } = "";
+    }
+}

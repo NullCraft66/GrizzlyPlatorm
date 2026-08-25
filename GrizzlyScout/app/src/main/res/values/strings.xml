@@ -1,0 +1,25 @@
+<resources>
+    <string name="action_settings">Settings</string>
+    <string name="title_activity_main">MainActivity</string>
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="nav_header_title">Android Studio</string>
+    <string name="nav_header_subtitle">android.studio@android.com</string>
+    <string name="nav_header_desc">Navigation header</string>
+
+    <string name="menu_home">Home</string>
+    <string name="menu_gallery">Gallery</string>
+    <string name="menu_slideshow">Slideshow</string>
+    <string name="menu_tools">Tools</string>
+    <string name="menu_share">Share</string>
+    <string name="menu_send">Send</string>
+    <string name="grizzly_logo_content_description">Grizzly Logo Main</string>
+    <string name="main_intro_description">Welcome to GrizzlyScout, the latest and greatest of FRC scouting applications. Use the below button to begin scouting a new team, or the top left navigation menu to edit an existing team.</string>
+    <string name="app_name">GrizzlyScout</string>
+    <string name="scout_new_team">Scout New Team</string>
+    <string name="edit_existing_team">Edit Existing Team</string>
+    <string name="defaulttext">DefaultText</string>
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+</resources>

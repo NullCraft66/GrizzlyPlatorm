@@ -1,0 +1,6 @@
+@GrizzlyPlatform.Api_HostAddress = http://localhost:5263
+
+GET {{GrizzlyPlatform.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

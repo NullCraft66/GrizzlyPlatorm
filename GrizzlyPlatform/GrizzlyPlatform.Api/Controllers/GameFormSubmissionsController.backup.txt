@@ -1,0 +1,130 @@
+using GrizzlyPlatform.Api.Data;
+using GrizzlyPlatform.Api.Models;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+namespace GrizzlyPlatform.Api.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class GameFormSubmissionsController : ControllerBase
+{
+    private readonly GrizzlyDbContext _context;
+
+    public GameFormSubmissionsController(GrizzlyDbContext context)
+    {
+        _context = context;
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetSubmissions()
+    {
+        var submissions = await _context.GameFormSubmissions
+            .Include(s => s.GameForm)
+            .Include(s => s.Match)
+            .Include(s => s.Team)
+            .Include(s => s.Answers)
+            .ToListAsync();
+
+        return Ok(submissions);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> CreateSubmission(
+        GameFormSubmission submission)
+    {
+        submission.SubmittedAt = DateTime.UtcNow;
+
+        _context.GameFormSubmissions.Add(submission);
+        await _context.SaveChangesAsync();
+
+        return CreatedAtAction(
+            nameof(GetSubmission),
+            new { id = submission.Id },
+            submission);
+    }
+
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetSubmission(int id)
+    {
+        var submission = await _context.GameFormSubmissions
+            .Include(s => s.GameForm)
+            .Include(s => s.Match)
+            .Include(s => s.Team)
+            .Include(s => s.Answers)
+            .FirstOrDefaultAsync(s => s.Id == id);
+
+        if (submission == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(new
+        {
+            submission.Id,
+            submission.GameFormId,
+            submission.MatchId,
+            submission.TeamId,
+            submission.SubmittedAt,
+
+            gameForm = submission.GameForm,
+            match = submission.Match,
+            team = submission.Team,
+
+            answers = submission.Answers.Select(a => new
+            {
+                a.Id,
+                a.GameFormSubmissionId,
+                a.GameFormFieldId,
+                a.Value
+            })
+        });
+    }
+
+    [HttpPost("{submissionId}/answers")]
+    public async Task<IActionResult> CreateAnswer(
+        int submissionId,
+        GameFormAnswer answer)
+    {
+        var submission = await _context.GameFormSubmissions
+            .FindAsync(submissionId);
+
+        if (submission == null)
+        {
+            return NotFound(
+                "The specified submission does not exist.");
+        }
+
+        var field = await _context.GameFormFields
+            .FindAsync(answer.GameFormFieldId);
+
+        if (field == null)
+        {
+            return NotFound(
+                "The specified game form field does not exist.");
+        }
+
+        if (answer.GameFormSubmissionId != submissionId)
+        {
+            return BadRequest(
+                "The answer does not belong to the specified submission.");
+        }
+
+        if (field.GameFormId != submission.GameFormId)
+        {
+            return BadRequest(
+                "The field does not belong to the submission's game form.");
+        }
+
+        _context.GameFormAnswers.Add(answer);
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            answer.Id,
+            answer.GameFormSubmissionId,
+            answer.GameFormFieldId,
+            answer.Value
+        });
+    }
+}

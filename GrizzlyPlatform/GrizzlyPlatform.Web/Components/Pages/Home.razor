@@ -1,0 +1,86 @@
+﻿@page "/"
+@inject HttpClient Http
+
+<PageTitle>GrizzlyPlatform</PageTitle>
+
+<div class="dashboard">
+    <h1>GrizzlyPlatform</h1>
+
+    <p class="lead">
+        Robotics scouting and event management platform
+    </p>
+
+    @if (events == null)
+    {
+        <p>Loading...</p>
+    }
+    else
+    {
+        <div class="dashboard-grid">
+
+            <div class="dashboard-card">
+                <h2>Events</h2>
+                <p class="number">@events.Count</p>
+                <NavLink class="dashboard-button" href="events">
+                    View Events
+                </NavLink>
+            </div>
+
+            <div class="dashboard-card">
+                <h2>Current Season</h2>
+
+                @if (events.Count > 0 && events[0].Season != null)
+                {
+                    <p class="number">@events[0].Season.Name</p>
+                    <p>@events[0].Season.Year</p>
+                }
+                else
+                {
+                    <p>No season data</p>
+                }
+            </div>
+
+            <div class="dashboard-card">
+                <h2>Latest Event</h2>
+
+                @if (events.Count > 0)
+                {
+                    <p class="number">@events[0].Name</p>
+                    <p>@events[0].Location</p>
+                }
+                else
+                {
+                    <p>No events</p>
+                }
+            </div>
+
+        </div>
+    }
+</div>
+
+@code {
+    private List<EventModel>? events;
+
+    protected override async Task OnInitializedAsync()
+    {
+        events = await Http.GetFromJsonAsync<List<EventModel>>(
+            "api/events");
+    }
+
+    public class EventModel
+    {
+        public int Id { get; set; }
+        public int SeasonId { get; set; }
+        public string Name { get; set; } = "";
+        public string Location { get; set; } = "";
+        public string? BlueAllianceKey { get; set; }
+        public SeasonModel? Season { get; set; }
+    }
+
+    public class SeasonModel
+    {
+        public int Id { get; set; }
+        public int Year { get; set; }
+        public string Name { get; set; } = "";
+    }
+}

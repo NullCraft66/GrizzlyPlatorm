@@ -1,0 +1,387 @@
+@page "/events"
+@rendermode InteractiveServer
+@inject HttpClient Http
+
+<PageTitle>Events</PageTitle>
+
+<h1>Events</h1>
+
+<button @onclick="ShowAddForm">
+    + Add Event
+</button>
+
+@if (showForm)
+{
+    <div class="event-form">
+        <h2>@(editingEvent ? "Edit Event" : "Add Event")</h2>
+
+        <div>
+            <label>Event Name</label>
+            <input @bind="newEvent.Name" />
+        </div>
+
+
+
+        <div>
+            <label>Location</label>
+            <input @bind="newEvent.Location" />
+        </div>
+
+        <div>
+            <label>Season</label>
+
+            <select @bind="newEvent.SeasonId">
+                <option value="0">Select a season</option>
+
+                @foreach (var season in seasons)
+                {
+                    <option value="@season.Id">
+                        @season.Year @season.Name
+                    </option>
+                }
+            </select>
+        </div>
+                   <label>Event Type</label>
+
+    <select @bind="newEvent.EventType">
+        <option value="Competition">Competition</option>
+        <option value="Offseason">Offseason</option>
+    </select>
+
+        <div>
+            <label>Blue Alliance Key</label>
+            <input @bind="newEvent.BlueAllianceKey" />
+        </div>
+
+        <button @onclick="SaveEvent">
+            @(editingEvent ? "Save Changes" : "Create Event")
+        </button>
+
+        <button @onclick="CancelForm">
+            Cancel
+        </button>
+    </div>
+}
+
+@if (events == null)
+{
+    <p>Loading events...</p>
+}
+else if (events.Count == 0)
+{
+    <p>No events have been added yet.</p>
+}
+else
+{
+    @foreach (var seasonGroup in events
+        .Where(e => e.Season != null)
+        .GroupBy(e => e.Season!.Id)
+        .OrderByDescending(g => g.First().Season!.Year))
+    {
+        var season = seasonGroup.First().Season!;
+
+        <details class="season-section">
+            <summary>
+                <strong>
+                    @season.Year @season.Name
+                </strong>
+
+                <span>
+                    @seasonGroup.Count()
+                    event@(seasonGroup.Count() == 1 ? "" : "s")
+                </span>
+            </summary>
+
+            <div class="season-events">
+                @foreach (var eventItem in seasonGroup)
+                {
+                    <div class="event-card">
+                        <h2>@eventItem.Name</h2>
+
+                      <p>
+    <strong>Location:</strong>
+    @eventItem.Location
+</p>
+
+<p>
+    <strong>Event Type:</strong>
+    @eventItem.EventType
+</p>
+
+<p>
+                            <strong>Blue Alliance Key:</strong>
+                            @eventItem.BlueAllianceKey
+                        </p>
+
+                        <div class="event-matches">
+                            <h3>Matches</h3>
+
+                            @if (eventMatches.ContainsKey(eventItem.Id))
+                            {
+                                var matches = eventMatches[eventItem.Id];
+
+                                @if (matches.Count == 0)
+                                {
+                                    <p>No matches have been added yet.</p>
+                                }
+                                else
+                                {
+                                    @foreach (var match in matches.OrderBy(m => m.MatchNumber))
+                                    {
+                                        <div class="match-card">
+                                            <h4>
+                                                @match.MatchType
+                                                @match.MatchNumber
+                                            </h4>
+
+                                            <p>
+                                                <strong>Red:</strong>
+                                                @match.RedTeam1?.TeamNumber
+                                                -
+                                                @match.RedTeam2?.TeamNumber
+                                                -
+                                                @match.RedTeam3?.TeamNumber
+                                            </p>
+
+                                            <p>
+                                                <strong>Blue:</strong>
+                                                @match.BlueTeam1?.TeamNumber
+                                                -
+                                                @match.BlueTeam2?.TeamNumber
+                                                -
+                                                @match.BlueTeam3?.TeamNumber
+                                            </p>
+                                        </div>
+                                    }
+                                }
+                            }
+                            else
+                            {
+                               <button @onclick="() => LoadMatches(eventItem.Id)">
+    Load Matches
+</button>
+                            }
+                        </div>
+
+                        <div class="event-buttons">
+
+                            <button @onclick="() => SyncTeams(eventItem.Id)">
+                                Sync Teams
+                            </button>
+
+
+   <a href="@($"/events/{eventItem.Id}/teams")">
+    View Teams
+</a>
+   
+                            <button @onclick="() => StartEdit(eventItem)">
+                                Edit
+                            </button>
+<button @onclick="() => ConfirmDelete(eventItem)">
+    Delete
+</button>
+                        </div>
+                    </div>
+                }
+            </div>
+        </details>
+    }
+}
+
+@if (eventPendingDelete != null)
+{
+    <div class="delete-confirmation">
+        <h2>Delete Event?</h2>
+
+        <p>
+            Are you sure you want to delete
+            <strong>@eventPendingDelete.Name</strong>?
+        </p>
+
+        <button @onclick="DeleteEvent">
+            Yes, Delete
+        </button>
+
+        <button @onclick="CancelDelete">
+            Cancel
+        </button>
+    </div>
+}
+@code {
+      private List<EventModel>? events;
+    private List<SeasonModel> seasons = new();
+
+    private Dictionary<int, List<MatchModel>> eventMatches = new();
+
+    private bool showForm;    private bool editingEvent;
+
+    private EventModel newEvent = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEvents();
+        await LoadSeasons();
+    }
+
+    private async Task LoadEvents()
+    {
+        events = await Http.GetFromJsonAsync<List<EventModel>>(
+            "api/events");
+    }
+
+    private async Task LoadSeasons()
+    {
+        seasons = await Http.GetFromJsonAsync<List<SeasonModel>>(
+            "api/seasons") ?? new();
+    }
+
+    private void ShowAddForm()
+    {
+        editingEvent = false;
+
+        newEvent = new EventModel();
+
+        if (seasons.Count > 0)
+        {
+            newEvent.SeasonId = seasons[0].Id;
+        }
+
+        showForm = true;
+    }
+
+  private void StartEdit(EventModel eventItem)
+{
+    editingEvent = true;
+
+    newEvent = new EventModel
+    {
+        Id = eventItem.Id,
+        SeasonId = eventItem.SeasonId,
+        Name = eventItem.Name,
+        Location = eventItem.Location,
+        EventType = eventItem.EventType,
+        BlueAllianceKey = eventItem.BlueAllianceKey
+    };
+
+    showForm = true;
+}
+
+    private void CancelForm()
+    {
+        showForm = false;
+        editingEvent = false;
+        newEvent = new EventModel();
+    }
+
+    private async Task SaveEvent()
+    {
+        if (newEvent.SeasonId == 0)
+        {
+            return;
+        }
+
+        HttpResponseMessage response;
+
+        if (editingEvent)
+        {
+            response = await Http.PutAsJsonAsync(
+                $"api/events/{newEvent.Id}",
+                newEvent);
+        }
+        else
+        {
+            response = await Http.PostAsJsonAsync(
+                "api/events",
+                newEvent);
+        }
+
+        if (response.IsSuccessStatusCode)
+        {
+            CancelForm();
+            await LoadEvents();
+        }
+    }
+
+   private EventModel? eventPendingDelete;
+
+private void ConfirmDelete(EventModel eventItem)
+{
+    eventPendingDelete = eventItem;
+}
+
+private void CancelDelete()
+{
+    eventPendingDelete = null;
+}
+
+private async Task DeleteEvent()
+{
+    if (eventPendingDelete == null)
+    {
+        return;
+    }
+
+    var response = await Http.DeleteAsync(
+        $"api/events/{eventPendingDelete.Id}");
+
+    if (response.IsSuccessStatusCode)
+    {
+        eventPendingDelete = null;
+        await LoadEvents();
+    }
+}
+
+    private async Task SyncTeams(int eventId)
+    {
+        await Http.PostAsync(
+            $"api/events/{eventId}/sync-teams",
+            null);
+
+        await LoadEvents();
+    }
+    private async Task LoadMatches(int eventId)
+    {
+        var matches = await Http.GetFromJsonAsync<List<MatchModel>>(
+            $"api/matches/event/{eventId}");
+
+        eventMatches[eventId] = matches ?? new();
+    }
+        public class MatchModel
+    {
+        public int Id { get; set; }
+        public int EventId { get; set; }
+        public string MatchType { get; set; } = "";
+        public int MatchNumber { get; set; }
+
+        public TeamModel? RedTeam1 { get; set; }
+        public TeamModel? RedTeam2 { get; set; }
+        public TeamModel? RedTeam3 { get; set; }
+
+        public TeamModel? BlueTeam1 { get; set; }
+        public TeamModel? BlueTeam2 { get; set; }
+        public TeamModel? BlueTeam3 { get; set; }
+    }
+
+    public class TeamModel
+    {
+        public int Id { get; set; }
+        public int TeamNumber { get; set; }
+        public string Name { get; set; } = "";
+    }  public class EventModel
+{
+    public int Id { get; set; }
+    public int SeasonId { get; set; }
+    public string Name { get; set; } = "";
+    public string Location { get; set; } = "";
+    public string EventType { get; set; } = "Competition";
+    public string? BlueAllianceKey { get; set; }
+    public SeasonModel? Season { get; set; }
+}
+
+    public class SeasonModel
+    {
+        public int Id { get; set; }
+        public int Year { get; set; }
+        public string Name { get; set; } = "";
+    }
+}

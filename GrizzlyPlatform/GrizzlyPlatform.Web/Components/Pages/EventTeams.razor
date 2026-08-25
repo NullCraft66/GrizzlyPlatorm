@@ -1,0 +1,151 @@
+@page "/events/{EventId:int}/teams"
+@rendermode InteractiveServer
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageTitle>Event Teams</PageTitle>
+
+@if (eventInfo == null)
+{
+    <p>Loading event...</p>
+}
+else
+{
+    <h1>@eventInfo.Name</h1>
+
+    <p>
+        <strong>Location:</strong>
+        @eventInfo.Location
+    </p>
+
+    <p>
+        <strong>Season:</strong>
+        @eventInfo.Season?.Year @eventInfo.Season?.Name
+    </p>
+
+    <hr />
+
+    <div class="team-header">
+        <h2>
+            Teams (@FilteredTeams.Count())
+        </h2>
+
+        <input
+            type="text"
+            placeholder="Search teams..."
+            @bind="searchText"
+            @bind:event="oninput" />
+    </div>
+
+    @if (FilteredTeams.Count() == 0)
+    {
+        <p>No teams match your search.</p>
+    }
+    else
+    {
+        <div class="team-list">
+            @foreach (var eventTeam in FilteredTeams)
+            {
+                <div class="team-card">
+
+                    <h3>
+                        Team @eventTeam.Team.TeamNumber
+                    </h3>
+
+                    <p>
+                        <strong>Name:</strong>
+                        @eventTeam.Team.Name
+                    </p>
+
+                    <p>
+                        <strong>Location:</strong>
+                        @eventTeam.Team.Location
+                    </p>
+
+                    <button @onclick="() => ViewTeam(eventTeam.Team.Id)">
+                        View Team
+                    </button>
+
+                </div>
+            }
+        </div>
+    }
+
+    <button @onclick="GoBack">
+        Back to Events
+    </button>
+}
+
+@code {
+    [Parameter]
+    public int EventId { get; set; }
+
+    private EventModel? eventInfo;
+    private List<EventTeamModel> teams = new();
+
+    private string searchText = "";
+
+    private IEnumerable<EventTeamModel> FilteredTeams =>
+        teams
+            .Where(t =>
+                string.IsNullOrWhiteSpace(searchText) ||
+                t.Team.TeamNumber
+                    .ToString()
+                    .Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                t.Team.Name
+                    .Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                t.Team.Location
+                    .Contains(searchText, StringComparison.OrdinalIgnoreCase))
+            .OrderBy(t => t.Team.TeamNumber);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        eventInfo = await Http.GetFromJsonAsync<EventModel>(
+            $"api/events/{EventId}");
+
+        teams = await Http.GetFromJsonAsync<List<EventTeamModel>>(
+            $"api/eventteams/event/{EventId}") ?? new();
+    }
+
+    private void ViewTeam(int teamId)
+    {
+        Navigation.NavigateTo($"/teams/{teamId}");
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/events");
+    }
+
+    public class EventModel
+    {
+        public int Id { get; set; }
+        public int SeasonId { get; set; }
+        public string Name { get; set; } = "";
+        public string Location { get; set; } = "";
+        public SeasonModel? Season { get; set; }
+    }
+
+    public class SeasonModel
+    {
+        public int Id { get; set; }
+        public int Year { get; set; }
+        public string Name { get; set; } = "";
+    }
+
+    public class EventTeamModel
+    {
+        public int Id { get; set; }
+        public int EventId { get; set; }
+        public int TeamId { get; set; }
+        public TeamModel Team { get; set; } = new();
+    }
+
+    public class TeamModel
+    {
+        public int Id { get; set; }
+        public int TeamNumber { get; set; }
+        public string Name { get; set; } = "";
+        public string Location { get; set; } = "";
+    }
+}
