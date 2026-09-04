@@ -14,6 +14,10 @@ public class GameFormSubmission
 
     public Match? Match { get; set; }
 
+    public int? EventId { get; set; }
+
+    public Event? Event { get; set; }
+
     public int TeamId { get; set; }
 
     public Team? Team { get; set; }

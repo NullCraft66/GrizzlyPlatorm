@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace GrizzlyPlatform.Web.Models;
 
@@ -29,9 +30,10 @@ public class SubmissionModel
 
 public class SubmissionAnswerModel
 {
-    public int Id { get; set; }
-
+    [JsonPropertyName("fieldId")]
     public int GameFormFieldId { get; set; }
 
     public string Value { get; set; } = "";
+
+    public string? Question { get; set; }
 }
