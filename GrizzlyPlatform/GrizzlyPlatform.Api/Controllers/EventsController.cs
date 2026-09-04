@@ -1,3 +1,4 @@
+using System.Text.Json;
 using GrizzlyPlatform.Api.Data;
 using GrizzlyPlatform.Api.Models;
 using GrizzlyPlatform.Api.Services;
@@ -240,184 +241,229 @@ public class EventsController : ControllerBase
             total = imported + alreadyExists
         });
     }
+
     [HttpGet("{id}/bluealliance/matches")]
-public async Task<IActionResult> GetBlueAllianceMatches(int id)
-{
-    var eventItem = await _context.Events.FindAsync(id);
-
-    if (eventItem == null)
+    public async Task<IActionResult> GetBlueAllianceMatches(int id)
     {
-        return NotFound();
-    }
+        var eventItem = await _context.Events.FindAsync(id);
 
-    if (string.IsNullOrWhiteSpace(eventItem.BlueAllianceKey))
-    {
-        return BadRequest(
-            "This event does not have a Blue Alliance key.");
-    }
+        if (eventItem == null)
+        {
+            return NotFound();
+        }
 
-    var matches = await _blueAllianceService.GetEventMatchesAsync(
-        eventItem.BlueAllianceKey);
+        if (string.IsNullOrWhiteSpace(eventItem.BlueAllianceKey))
+        {
+            return BadRequest(
+                "This event does not have a Blue Alliance key.");
+        }
 
-    return Ok(matches);
-}
-[HttpPost("{id}/sync-matches")]
-public async Task<IActionResult> SyncMatches(int id)
-{
-    var eventItem = await _context.Events
-        .Include(e => e.EventTeams)
-        .FirstOrDefaultAsync(e => e.Id == id);
-
-    if (eventItem == null)
-    {
-        return NotFound();
-    }
-
-    if (string.IsNullOrWhiteSpace(eventItem.BlueAllianceKey))
-    {
-        return BadRequest(
-            "This event does not have a Blue Alliance key.");
-    }
-
-    var blueAllianceMatches =
-        await _blueAllianceService.GetEventMatchesAsync(
+        var matches = await _blueAllianceService.GetEventMatchesAsync(
             eventItem.BlueAllianceKey);
 
-    var imported = 0;
-    var alreadyExists = 0;
-    var skipped = 0;
-
-    foreach (var matchJson in blueAllianceMatches.EnumerateArray())
-    {
-        var compLevel =
-            matchJson.GetProperty("comp_level").GetString()
-            ?? "qm";
-
-        var matchNumber =
-            matchJson.GetProperty("match_number").GetInt32();
-
-         var setNumber =
-    matchJson.GetProperty("set_number").GetInt32();
-
-        var matchType = compLevel switch
-        {
-            "qm" => "Qualification",
-            "ef" => "EighthFinal",
-            "qf" => "Quarterfinal",
-            "sf" => "Semifinal",
-            "f" => "Final",
-            _ => compLevel
-        };
-var existingMatch = await _context.Matches
-    .FirstOrDefaultAsync(m =>
-        m.EventId == id &&
-        m.MatchType == matchType &&
-        m.MatchNumber == matchNumber &&
-        m.SetNumber == setNumber);
-
-        if (existingMatch != null)
-        {
-            alreadyExists++;
-            continue;
-        }
-
-        var alliances = matchJson.GetProperty("alliances");
-
-        var red = alliances.GetProperty("red");
-        var blue = alliances.GetProperty("blue");
-
-        var redTeams = red
-            .GetProperty("team_keys")
-            .EnumerateArray()
-            .Select(x => x.GetString())
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .ToList();
-
-        var blueTeams = blue
-            .GetProperty("team_keys")
-            .EnumerateArray()
-            .Select(x => x.GetString())
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .ToList();
-
-        if (redTeams.Count < 3 || blueTeams.Count < 3)
-        {
-            skipped++;
-            continue;
-        }
-
-        var redTeam1Number = ParseTeamNumber(redTeams[0]!);
-        var redTeam2Number = ParseTeamNumber(redTeams[1]!);
-        var redTeam3Number = ParseTeamNumber(redTeams[2]!);
-
-        var blueTeam1Number = ParseTeamNumber(blueTeams[0]!);
-        var blueTeam2Number = ParseTeamNumber(blueTeams[1]!);
-        var blueTeam3Number = ParseTeamNumber(blueTeams[2]!);
-
-        var redTeam1 = await _context.Teams
-            .FirstOrDefaultAsync(t => t.TeamNumber == redTeam1Number);
-
-        var redTeam2 = await _context.Teams
-            .FirstOrDefaultAsync(t => t.TeamNumber == redTeam2Number);
-
-        var redTeam3 = await _context.Teams
-            .FirstOrDefaultAsync(t => t.TeamNumber == redTeam3Number);
-
-        var blueTeam1 = await _context.Teams
-            .FirstOrDefaultAsync(t => t.TeamNumber == blueTeam1Number);
-
-        var blueTeam2 = await _context.Teams
-            .FirstOrDefaultAsync(t => t.TeamNumber == blueTeam2Number);
-
-        var blueTeam3 = await _context.Teams
-            .FirstOrDefaultAsync(t => t.TeamNumber == blueTeam3Number);
-
-        if (redTeam1 == null ||
-            redTeam2 == null ||
-            redTeam3 == null ||
-            blueTeam1 == null ||
-            blueTeam2 == null ||
-            blueTeam3 == null)
-        {
-            skipped++;
-            continue;
-        }
-
-      var match = new Match
-{
-    EventId = id,
-    MatchType = matchType,
-    MatchNumber = matchNumber,
-    SetNumber = setNumber,
-
-    RedTeam1Id = redTeam1.Id,
-            RedTeam2Id = redTeam2.Id,
-            RedTeam3Id = redTeam3.Id,
-
-            BlueTeam1Id = blueTeam1.Id,
-            BlueTeam2Id = blueTeam2.Id,
-            BlueTeam3Id = blueTeam3.Id
-        };
-
-        _context.Matches.Add(match);
-        imported++;
+        return Ok(matches);
     }
 
-    await _context.SaveChangesAsync();
-
-    return Ok(new
+    [HttpPost("{id}/sync-matches")]
+    public async Task<IActionResult> SyncMatches(int id)
     {
-        eventId = id,
-        imported,
-        alreadyExists,
-        skipped,
-        total = imported + alreadyExists + skipped
-    });
-}
+        var eventItem = await _context.Events
+            .Include(e => e.EventTeams)
+            .FirstOrDefaultAsync(e => e.Id == id);
 
-private static int ParseTeamNumber(string teamKey)
-{
-    return int.Parse(
-        teamKey.Replace("frc", ""));
-}
+        if (eventItem == null)
+        {
+            return NotFound();
+        }
+
+        if (string.IsNullOrWhiteSpace(eventItem.BlueAllianceKey))
+        {
+            return BadRequest(
+                "This event does not have a Blue Alliance key.");
+        }
+
+        var blueAllianceMatches =
+            await _blueAllianceService.GetEventMatchesAsync(
+                eventItem.BlueAllianceKey);
+
+        var imported = 0;
+        var alreadyExists = 0;
+        var skipped = 0;
+
+        foreach (var matchJson in blueAllianceMatches.EnumerateArray())
+        {
+            var compLevel =
+                matchJson.GetProperty("comp_level").GetString()
+                ?? "qm";
+
+            var matchNumber =
+                matchJson.GetProperty("match_number").GetInt32();
+
+            var setNumber =
+                matchJson.GetProperty("set_number").GetInt32();
+
+            var matchType = compLevel switch
+            {
+                "qm" => "Qualification",
+                "ef" => "EighthFinal",
+                "qf" => "Quarterfinal",
+                "sf" => "Semifinal",
+                "f" => "Final",
+                _ => compLevel
+            };
+
+            var alliances =
+                matchJson.GetProperty("alliances");
+
+            var red =
+                alliances.GetProperty("red");
+
+            var blue =
+                alliances.GetProperty("blue");
+
+            var redScore =
+                red.GetProperty("score").GetInt32();
+
+            var blueScore =
+                blue.GetProperty("score").GetInt32();
+
+            var winningAlliance =
+                matchJson.TryGetProperty(
+                    "winning_alliance",
+                    out var winner)
+                    ? winner.GetString()
+                    : null;
+
+            var existingMatch = await _context.Matches
+                .FirstOrDefaultAsync(m =>
+                    m.EventId == id &&
+                    m.MatchType == matchType &&
+                    m.MatchNumber == matchNumber &&
+                    m.SetNumber == setNumber);
+
+            if (existingMatch != null)
+            {
+                existingMatch.RedScore = redScore;
+                existingMatch.BlueScore = blueScore;
+                existingMatch.WinningAlliance = winningAlliance;
+
+                alreadyExists++;
+                continue;
+            }
+
+            var redTeams = red
+                .GetProperty("team_keys")
+                .EnumerateArray()
+                .Select(x => x.GetString())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToList();
+
+            var blueTeams = blue
+                .GetProperty("team_keys")
+                .EnumerateArray()
+                .Select(x => x.GetString())
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToList();
+
+            if (redTeams.Count < 3 || blueTeams.Count < 3)
+            {
+                skipped++;
+                continue;
+            }
+
+            var redTeam1Number =
+                ParseTeamNumber(redTeams[0]!);
+
+            var redTeam2Number =
+                ParseTeamNumber(redTeams[1]!);
+
+            var redTeam3Number =
+                ParseTeamNumber(redTeams[2]!);
+
+            var blueTeam1Number =
+                ParseTeamNumber(blueTeams[0]!);
+
+            var blueTeam2Number =
+                ParseTeamNumber(blueTeams[1]!);
+
+            var blueTeam3Number =
+                ParseTeamNumber(blueTeams[2]!);
+
+            var redTeam1 = await _context.Teams
+                .FirstOrDefaultAsync(
+                    t => t.TeamNumber == redTeam1Number);
+
+            var redTeam2 = await _context.Teams
+                .FirstOrDefaultAsync(
+                    t => t.TeamNumber == redTeam2Number);
+
+            var redTeam3 = await _context.Teams
+                .FirstOrDefaultAsync(
+                    t => t.TeamNumber == redTeam3Number);
+
+            var blueTeam1 = await _context.Teams
+                .FirstOrDefaultAsync(
+                    t => t.TeamNumber == blueTeam1Number);
+
+            var blueTeam2 = await _context.Teams
+                .FirstOrDefaultAsync(
+                    t => t.TeamNumber == blueTeam2Number);
+
+            var blueTeam3 = await _context.Teams
+                .FirstOrDefaultAsync(
+                    t => t.TeamNumber == blueTeam3Number);
+
+            if (redTeam1 == null ||
+                redTeam2 == null ||
+                redTeam3 == null ||
+                blueTeam1 == null ||
+                blueTeam2 == null ||
+                blueTeam3 == null)
+            {
+                skipped++;
+                continue;
+            }
+
+            var match = new Match
+            {
+                EventId = id,
+
+                MatchType = matchType,
+                MatchNumber = matchNumber,
+                SetNumber = setNumber,
+
+                RedTeam1Id = redTeam1.Id,
+                RedTeam2Id = redTeam2.Id,
+                RedTeam3Id = redTeam3.Id,
+
+                BlueTeam1Id = blueTeam1.Id,
+                BlueTeam2Id = blueTeam2.Id,
+                BlueTeam3Id = blueTeam3.Id,
+
+                RedScore = redScore,
+                BlueScore = blueScore,
+                WinningAlliance = winningAlliance
+            };
+
+            _context.Matches.Add(match);
+            imported++;
+        }
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            eventId = id,
+            imported,
+            alreadyExists,
+            skipped,
+            total = imported + alreadyExists + skipped
+        });
+    }
+
+    private static int ParseTeamNumber(string teamKey)
+    {
+        return int.Parse(
+            teamKey.Replace("frc", ""));
+    }
 }

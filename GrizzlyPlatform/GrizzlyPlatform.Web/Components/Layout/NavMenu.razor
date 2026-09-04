@@ -6,23 +6,60 @@
 
 <input type="checkbox" title="Navigation menu" class="navbar-toggler" />
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="nav flex-column">
+<div class="nav-scrollable"
+     onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="flex-column">
 
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+                <span class="bi bi-house-door-fill"
+                      aria-hidden="true"></span> Home
+            </NavLink>
+        </div>
+
+<div class="nav-item px-3">
+    <NavLink class="nav-link" href="seasons">
+        <span class="bi bi-calendar-range"
+              aria-hidden="true"></span> Seasons
+    </NavLink>
+</div>
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="events">
+                <span class="bi bi-calendar-event"
+                      aria-hidden="true"></span> Events
             </NavLink>
         </div>
 
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="events">
-                <span class="bi bi-calendar-event" aria-hidden="true"></span> Events
+            <NavLink class="nav-link" href="matches">
+                <span class="bi bi-list-ol"
+                      aria-hidden="true"></span> Matches
             </NavLink>
         </div>
 
-       
-   
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="gameforms">
+                <span class="bi bi-ui-checks"
+                      aria-hidden="true"></span> Game Forms
+            </NavLink>
+        </div>
+
+
+
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="scouting">
+                <span class="bi bi-clipboard-check"
+                      aria-hidden="true"></span> Scouting
+            </NavLink>
+        </div>
+
+<div class="nav-item px-3">
+    <NavLink class="nav-link" href="submissions">
+        <span class="bi bi-database"
+              aria-hidden="true"></span> Submissions
+    </NavLink>
+</div>
 
     </nav>
 </div>

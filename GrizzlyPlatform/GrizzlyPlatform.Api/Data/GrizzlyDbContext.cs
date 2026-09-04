@@ -20,6 +20,9 @@ public class GrizzlyDbContext : DbContext
     public DbSet<Event> Events { get; set; }
     public DbSet<EventTeam> EventTeams { get; set; }
     public DbSet<Match> Matches { get; set; }
+    public DbSet<ActiveScoutingConfiguration>
+    ActiveScoutingConfigurations { get; set; }
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -88,5 +91,17 @@ public class GrizzlyDbContext : DbContext
             .WithOne(o => o.GameFormField)
             .HasForeignKey(o => o.GameFormFieldId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ActiveScoutingConfiguration>()
+            .HasOne<GameForm>()
+            .WithMany()
+            .HasForeignKey(c => c.ActivePitFormId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<ActiveScoutingConfiguration>()
+            .HasOne<GameForm>()
+            .WithMany()
+            .HasForeignKey(c => c.ActiveMatchFormId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

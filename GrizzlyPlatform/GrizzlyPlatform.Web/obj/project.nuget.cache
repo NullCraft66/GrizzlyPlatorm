@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "arToHRtGWTg=",
+  "success": true,
+  "projectFilePath": "C:\\YCSRobotics\\GrizzlyPlatorm\\GrizzlyPlatform\\GrizzlyPlatform.Web\\GrizzlyPlatform.Web.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\NullC\\.nuget\\packages\\microsoft.aspnetcore.app.internal.assets\\10.0.11\\microsoft.aspnetcore.app.internal.assets.10.0.11.nupkg.sha512"
+  ],
+  "logs": []
+}

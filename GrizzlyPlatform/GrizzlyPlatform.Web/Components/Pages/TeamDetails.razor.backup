@@ -1,0 +1,611 @@
+@page "/teams/{TeamId:int}"
+@rendermode InteractiveServer
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageTitle>Team Details</PageTitle>
+
+@if (team == null)
+{
+    <p>Loading team...</p>
+}
+else
+{
+    <div class="team-details">
+
+        <h1>Team @team.TeamNumber</h1>
+
+        <h2>@team.Name</h2>
+
+        <p>
+            <strong>Location:</strong>
+            @team.Location
+        </p>
+
+        <hr />
+
+        <h2>Events</h2>
+
+        @if (events.Count == 0)
+        {
+            <p>This team is not registered for any events.</p>
+        }
+        else
+        {
+            @foreach (var eventItem in events)
+            {
+                <div class="event-card">
+                    <h3>@eventItem.Name</h3>
+
+                    <p>
+                        <strong>Location:</strong>
+                        @eventItem.Location
+                    </p>
+
+                    <p>
+                        <strong>Season:</strong>
+                        @eventItem.Season?.Year
+                        @eventItem.Season?.Name
+                    </p>
+                </div>
+            }
+        }
+
+        <hr />
+
+<h2>Team Data</h2>
+
+@if (GetSelectedEvent() is EventModel dataEvent)
+{
+    <div class="team-data-card">
+        <h3>@dataEvent.Name</h3>
+
+        <p>
+            <strong>Matches Played:</strong>
+            @GetSelectedMatches().Count
+        </p>
+
+        <p>
+            <strong>Wins:</strong>
+            @GetWinCountForSelectedEvent()
+        </p>
+
+        <p>
+            <strong>Losses:</strong>
+            @GetLossCountForSelectedEvent()
+        </p>
+
+        <p>
+            <strong>Win Percentage:</strong>
+            @GetWinPercentage()%
+        </p>
+
+        <p>
+            <strong>Average Score:</strong>
+            @GetAverageScore()
+        </p>
+        <p>
+    <strong>Total Score:</strong>
+    @GetTotalScore()
+</p>
+    </div>
+}
+else
+{
+    <div class="team-data-card">
+        <p>
+            <strong>Team Data:</strong>
+            Select an event to view team data.
+        </p>
+    </div>
+}
+
+        <hr />
+
+        <h2>Matches</h2>
+
+        @if (matches.Count == 0)
+        {
+            <p>No matches found for this team.</p>
+        }
+        else
+        {
+            <div class="event-selector">
+                <label for="eventSelect">
+                    <strong>Select Event:</strong>
+                </label>
+
+                <select id="eventSelect" @bind="selectedEventId">
+                    <option value="0">Select an event...</option>
+
+                    @foreach (var eventGroup in matches.GroupBy(m => m.EventId))
+                    {
+                        var eventInfo = events.FirstOrDefault(
+                            e => e.Id == eventGroup.Key);
+
+                        <option value="@eventGroup.Key">
+                            @(eventInfo?.Name ?? $"Event {eventGroup.Key}")
+                        </option>
+                    }
+                </select>
+            </div>
+
+            @if (GetSelectedEvent() is EventModel selectedEvent)
+            {
+                <div class="selected-event">
+                    <h3>@selectedEvent.Name</h3>
+
+                    <p>
+                        <strong>Location:</strong>
+                        @selectedEvent.Location
+                    </p>
+
+                    <p>
+                        <strong>Season:</strong>
+                        @selectedEvent.Season?.Year
+                        @selectedEvent.Season?.Name
+                    </p>
+                </div>
+
+                @foreach (var currentMatch in GetSelectedMatches())
+                {
+                    var currentIsRed =
+                        currentMatch.RedTeam1?.TeamNumber == team.TeamNumber ||
+                        currentMatch.RedTeam2?.TeamNumber == team.TeamNumber ||
+                        currentMatch.RedTeam3?.TeamNumber == team.TeamNumber;
+
+                    var currentIsWinner =
+                        (currentIsRed &&
+                         currentMatch.WinningAlliance == "red") ||
+                        (!currentIsRed &&
+                         currentMatch.WinningAlliance == "blue");
+
+                    <div class="team-match-card">
+
+                        <div class="match-header">
+
+                            <h4>
+                                @currentMatch.MatchType
+                                @currentMatch.MatchNumber
+
+                                @if (currentMatch.MatchType != "Qualification")
+                                {
+                                    <span> - Set @currentMatch.SetNumber</span>
+                                }
+                            </h4>
+
+                            <div class="match-score">
+                                <strong>Score:</strong>
+
+                                <span class="red-score">
+                                    @currentMatch.RedScore
+                                </span>
+
+                                <span> - </span>
+
+                                <span class="blue-score">
+                                    @currentMatch.BlueScore
+                                </span>
+                            </div>
+
+                            <div class="match-result">
+                                <strong>Result:</strong>
+
+                                @if (string.IsNullOrWhiteSpace(
+                                    currentMatch.WinningAlliance))
+                                {
+                                    <span class="result-not-played">
+                                        Not played
+                                    </span>
+                                }
+                                else if (currentIsWinner)
+                                {
+                                    <span class="result-win">
+                                        WIN
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="result-loss">
+                                        LOSS
+                                    </span>
+                                }
+                            </div>
+
+                        </div>
+
+                        <div class="match-alliances">
+
+                            <div class="alliance alliance-red">
+
+                                <h5>RED</h5>
+
+                                <div class="team-list">
+
+                                    <div class="@GetTeamClass(
+                                        currentMatch.RedTeam1)">
+                                        <span class="team-number">
+                                            @currentMatch.RedTeam1?.TeamNumber
+                                        </span>
+
+                                        <span class="team-name">
+                                            @currentMatch.RedTeam1?.Name
+                                        </span>
+                                    </div>
+
+                                    <div class="@GetTeamClass(
+                                        currentMatch.RedTeam2)">
+                                        <span class="team-number">
+                                            @currentMatch.RedTeam2?.TeamNumber
+                                        </span>
+
+                                        <span class="team-name">
+                                            @currentMatch.RedTeam2?.Name
+                                        </span>
+                                    </div>
+
+                                    <div class="@GetTeamClass(
+                                        currentMatch.RedTeam3)">
+                                        <span class="team-number">
+                                            @currentMatch.RedTeam3?.TeamNumber
+                                        </span>
+
+                                        <span class="team-name">
+                                            @currentMatch.RedTeam3?.Name
+                                        </span>
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                            <div class="alliance alliance-blue">
+
+                                <h5>BLUE</h5>
+
+                                <div class="team-list">
+
+                                    <div class="@GetTeamClass(
+                                        currentMatch.BlueTeam1)">
+                                        <span class="team-number">
+                                            @currentMatch.BlueTeam1?.TeamNumber
+                                        </span>
+
+                                        <span class="team-name">
+                                            @currentMatch.BlueTeam1?.Name
+                                        </span>
+                                    </div>
+
+                                    <div class="@GetTeamClass(
+                                        currentMatch.BlueTeam2)">
+                                        <span class="team-number">
+                                            @currentMatch.BlueTeam2?.TeamNumber
+                                        </span>
+
+                                        <span class="team-name">
+                                            @currentMatch.BlueTeam2?.Name
+                                        </span>
+                                    </div>
+
+                                    <div class="@GetTeamClass(
+                                        currentMatch.BlueTeam3)">
+                                        <span class="team-number">
+                                            @currentMatch.BlueTeam3?.TeamNumber
+                                        </span>
+
+                                        <span class="team-name">
+                                            @currentMatch.BlueTeam3?.Name
+                                        </span>
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+                }
+            }
+            else
+            {
+                <p class="no-event-selected">
+                    Select an event to view matches.
+                </p>
+            }
+        }
+
+        <hr />
+
+        <h2>Scouting</h2>
+
+        <p>
+            Scouting data will appear here once scouting is enabled
+            for this team.
+        </p>
+
+        <button @onclick="GoBack">
+            Back
+        </button>
+
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int TeamId { get; set; }
+
+    private TeamModel? team;
+
+    private List<EventModel> events = new();
+
+    private List<MatchModel> matches = new();
+
+    private int selectedEventId;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        team = await Http.GetFromJsonAsync<TeamModel>(
+            $"api/teams/{TeamId}");
+
+        if (team == null)
+        {
+            return;
+        }
+
+        var eventTeams =
+            await Http.GetFromJsonAsync<List<EventTeamModel>>(
+                "api/eventteams");
+
+        events = eventTeams?
+            .Where(et => et.TeamId == TeamId)
+            .Select(et => et.EventInfo)
+            .Where(e => e != null)
+            .ToList() ?? new();
+
+        matches = await Http.GetFromJsonAsync<List<MatchModel>>(
+            $"api/matches/team/{TeamId}") ?? new();
+
+        selectedEventId = 0;
+    }
+
+    private EventModel? GetSelectedEvent()
+    {
+        return events.FirstOrDefault(
+            e => e.Id == selectedEventId);
+    }
+
+    private List<MatchModel> GetSelectedMatches()
+    {
+        return matches
+            .Where(m => m.EventId == selectedEventId)
+            .ToList();
+    }
+private int GetWinCountForSelectedEvent()
+{
+    return GetSelectedMatches().Count(m =>
+    {
+        var isRed =
+            m.RedTeam1?.TeamNumber == team?.TeamNumber ||
+            m.RedTeam2?.TeamNumber == team?.TeamNumber ||
+            m.RedTeam3?.TeamNumber == team?.TeamNumber;
+
+        return (isRed && m.WinningAlliance == "red") ||
+               (!isRed && m.WinningAlliance == "blue");
+    });
+}
+
+private int GetLossCountForSelectedEvent()
+{
+    return GetSelectedMatches().Count(m =>
+    {
+        var isRed =
+            m.RedTeam1?.TeamNumber == team?.TeamNumber ||
+            m.RedTeam2?.TeamNumber == team?.TeamNumber ||
+            m.RedTeam3?.TeamNumber == team?.TeamNumber;
+
+        var hasResult =
+            !string.IsNullOrWhiteSpace(m.WinningAlliance);
+
+        var won =
+            (isRed && m.WinningAlliance == "red") ||
+            (!isRed && m.WinningAlliance == "blue");
+
+        return hasResult && !won;
+    });
+}
+private double GetWinPercentage()
+{
+    var selectedMatches = GetSelectedMatches();
+
+    if (selectedMatches.Count == 0)
+    {
+        return 0;
+    }
+
+    var wins = GetWinCountForSelectedEvent();
+
+    return Math.Round(
+        (double)wins / selectedMatches.Count * 100,
+        1);
+}
+
+private double GetAverageScore()
+{
+    var selectedMatches = GetSelectedMatches();
+
+    if (selectedMatches.Count == 0)
+    {
+        return 0;
+    }
+
+    double totalScore = 0;
+    int scoredMatches = 0;
+
+    foreach (var match in selectedMatches)
+    {
+        var isRed =
+            match.RedTeam1?.TeamNumber == team?.TeamNumber ||
+            match.RedTeam2?.TeamNumber == team?.TeamNumber ||
+            match.RedTeam3?.TeamNumber == team?.TeamNumber;
+
+        if (string.IsNullOrWhiteSpace(match.WinningAlliance))
+        {
+            continue;
+        }
+
+        totalScore += isRed
+            ? match.RedScore
+            : match.BlueScore;
+
+        scoredMatches++;
+    }
+
+    if (scoredMatches == 0)
+    {
+        return 0;
+    }
+
+    return Math.Round(
+        totalScore / scoredMatches,
+        1);
+}
+    private int GetWinCount()
+    {
+        return matches.Count(m =>
+        {
+            var isRed =
+                m.RedTeam1?.TeamNumber == team?.TeamNumber ||
+                m.RedTeam2?.TeamNumber == team?.TeamNumber ||
+                m.RedTeam3?.TeamNumber == team?.TeamNumber;
+
+            return (isRed && m.WinningAlliance == "red") ||
+                   (!isRed && m.WinningAlliance == "blue");
+        });
+    }
+private int GetTotalScore()
+{
+    var selectedMatches = GetSelectedMatches();
+
+    int totalScore = 0;
+
+    foreach (var match in selectedMatches)
+    {
+        var isRed =
+            match.RedTeam1?.TeamNumber == team?.TeamNumber ||
+            match.RedTeam2?.TeamNumber == team?.TeamNumber ||
+            match.RedTeam3?.TeamNumber == team?.TeamNumber;
+
+        if (string.IsNullOrWhiteSpace(match.WinningAlliance))
+        {
+            continue;
+        }
+
+        totalScore += isRed
+            ? match.RedScore
+            : match.BlueScore;
+    }
+
+    return totalScore;
+}
+    private int GetLossCount()
+    {
+        return matches.Count(m =>
+        {
+            var isRed =
+                m.RedTeam1?.TeamNumber == team?.TeamNumber ||
+                m.RedTeam2?.TeamNumber == team?.TeamNumber ||
+                m.RedTeam3?.TeamNumber == team?.TeamNumber;
+
+            var hasResult =
+                !string.IsNullOrWhiteSpace(m.WinningAlliance);
+
+            var won =
+                (isRed && m.WinningAlliance == "red") ||
+                (!isRed && m.WinningAlliance == "blue");
+
+            return hasResult && !won;
+        });
+    }
+
+    private string GetTeamClass(MatchTeamModel? matchTeam)
+    {
+        if (matchTeam == null)
+        {
+            return "match-team";
+        }
+
+        if (matchTeam.TeamNumber == team?.TeamNumber)
+        {
+            return "match-team current-team";
+        }
+
+        return "match-team";
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/events");
+    }
+
+    public class TeamModel
+    {
+        public int Id { get; set; }
+        public int TeamNumber { get; set; }
+        public string Name { get; set; } = "";
+        public string Location { get; set; } = "";
+    }
+
+    public class EventTeamModel
+    {
+        public int Id { get; set; }
+        public int EventId { get; set; }
+        public int TeamId { get; set; }
+        public EventModel EventInfo { get; set; } = new();
+    }
+
+    public class EventModel
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = "";
+        public string Location { get; set; } = "";
+        public SeasonModel? Season { get; set; }
+    }
+
+    public class SeasonModel
+    {
+        public int Id { get; set; }
+        public int Year { get; set; }
+        public string Name { get; set; } = "";
+    }
+
+    public class MatchModel
+    {
+        public int Id { get; set; }
+        public int EventId { get; set; }
+        public string MatchType { get; set; } = "";
+        public int MatchNumber { get; set; }
+        public int SetNumber { get; set; }
+
+        public int RedScore { get; set; }
+        public int BlueScore { get; set; }
+
+        public string? WinningAlliance { get; set; }
+
+        public MatchTeamModel? RedTeam1 { get; set; }
+        public MatchTeamModel? RedTeam2 { get; set; }
+        public MatchTeamModel? RedTeam3 { get; set; }
+
+        public MatchTeamModel? BlueTeam1 { get; set; }
+        public MatchTeamModel? BlueTeam2 { get; set; }
+        public MatchTeamModel? BlueTeam3 { get; set; }
+    }
+
+    public class MatchTeamModel
+    {
+        public int Id { get; set; }
+        public int TeamNumber { get; set; }
+        public string Name { get; set; } = "";
+    }
+}
+

@@ -1,0 +1,357 @@
+@page "/submissions"
+@using System.Net.Http.Json
+@using GrizzlyPlatform.Web.Models
+@inject HttpClient Http
+
+<PageTitle>Scouting Submissions</PageTitle>
+
+<h1>Scouting Submissions</h1>
+
+@if (isLoading)
+{
+    <p>Loading scouting data...</p>
+}
+else
+{
+    <div class="submissions-toolbar">
+
+        <div class="btn-group"
+             role="group">
+
+            @foreach (var season in seasons)
+            {
+                <button class="btn @GetSeasonButtonClass(season.Id)"
+                        @onclick="@(() => SelectSeason(season.Id))">
+                    @season.Name
+                </button>
+            }
+
+        </div>
+
+        <button class="btn btn-primary"
+                @onclick="LoadData">
+            Refresh
+        </button>
+
+    </div>
+
+    @if (selectedSeasonId <= 0)
+    {
+        <p>Please select a season.</p>
+    }
+    else
+    {
+        <div class="submissions-toolbar">
+
+            <div class="btn-group"
+                 role="group">
+
+                <button class="btn @GetFilterButtonClass("Pit")"
+                        @onclick="@(() => SetFilter("Pit"))">
+                    Pit
+                </button>
+
+                <button class="btn @GetFilterButtonClass("Match")"
+                        @onclick="@(() => SetFilter("Match"))">
+                    Match
+                </button>
+
+            </div>
+
+        </div>
+
+        @if (FilteredSubmissions.Count == 0)
+        {
+            <p>
+                No @selectedFilter.ToLower()
+                scouting submissions have been found.
+            </p>
+        }
+        else
+        {
+            @foreach (var submission in FilteredSubmissions)
+            {
+                <div class="submission-card">
+
+                    <div class="submission-header">
+
+                        <div>
+
+                            <h3>
+                                Submission #@submission.Id
+                            </h3>
+
+                            <span class="badge bg-primary">
+                                Team @submission.TeamNumber
+                            </span>
+
+                            @if (IsPitSubmission(submission))
+                            {
+                                <span class="badge bg-success">
+                                    Pit
+                                </span>
+                            }
+                            else if (IsMatchSubmission(submission))
+                            {
+                                <span class="badge bg-warning text-dark">
+                                    Match
+                                </span>
+                            }
+
+                        </div>
+
+                        <div class="submission-date">
+                            @submission.CreatedAt
+                        </div>
+
+                    </div>
+
+                    <p>
+                        <strong>Scout:</strong>
+                        @submission.ScoutName
+                    </p>
+
+                    @if (submission.EventId.HasValue)
+                    {
+                        <p>
+                            <strong>Event ID:</strong>
+                            @submission.EventId
+                        </p>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(
+                        submission.MatchType))
+                    {
+                        <p>
+                            <strong>Match:</strong>
+                            @submission.MatchType
+                            @submission.MatchNumber
+                        </p>
+                    }
+
+                    <h5>Answers</h5>
+
+                    @if (submission.Answers == null ||
+                         submission.Answers.Count == 0)
+                    {
+                        <p>No answers found.</p>
+                    }
+                    else
+                    {
+                        <table class="table table-sm">
+
+                            <thead>
+                                <tr>
+                                    <th>Field ID</th>
+                                    <th>Answer</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+
+                                @foreach (
+                                    var answer
+                                    in submission.Answers)
+                                {
+                                    <tr>
+                                        <td>
+                                            @answer.GameFormFieldId
+                                        </td>
+
+                                        <td>
+                                            @answer.Value
+                                        </td>
+                                    </tr>
+                                }
+
+                            </tbody>
+
+                        </table>
+                    }
+
+                </div>
+            }
+        }
+    }
+}
+
+@code {
+
+    private List<SubmissionModel> submissions = new();
+
+    private List<SeasonModel> seasons = new();
+
+    private List<GameFormModel> gameForms = new();
+
+    private bool isLoading = true;
+
+    private int selectedSeasonId;
+
+    private string selectedFilter = "Pit";
+
+    private List<SubmissionModel> SeasonSubmissions
+    {
+        get
+        {
+            var seasonFormIds =
+                gameForms
+                    .Where(
+                        form =>
+                            form.SeasonId ==
+                            selectedSeasonId
+                    )
+                    .Select(
+                        form => form.Id
+                    )
+                    .ToList();
+
+            return submissions
+                .Where(
+                    submission =>
+                        seasonFormIds.Contains(
+                            submission.GameFormId
+                        )
+                )
+                .ToList();
+        }
+    }
+
+    private List<SubmissionModel> FilteredSubmissions
+    {
+        get
+        {
+            if (selectedFilter == "Pit")
+            {
+                return SeasonSubmissions
+                    .Where(IsPitSubmission)
+                    .ToList();
+            }
+
+            if (selectedFilter == "Match")
+            {
+                return SeasonSubmissions
+                    .Where(IsMatchSubmission)
+                    .ToList();
+            }
+
+            return SeasonSubmissions;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+
+        try
+        {
+            seasons =
+                await Http.GetFromJsonAsync<
+                    List<SeasonModel>
+                >(
+                    "api/Seasons"
+                )
+                ?? new List<SeasonModel>();
+
+            gameForms =
+                await Http.GetFromJsonAsync<
+                    List<GameFormModel>
+                >(
+                    "api/GameForms"
+                )
+                ?? new List<GameFormModel>();
+
+            submissions =
+                await Http.GetFromJsonAsync<
+                    List<SubmissionModel>
+                >(
+                    "api/GameFormSubmissions"
+                )
+                ?? new List<SubmissionModel>();
+
+            if (selectedSeasonId <= 0 &&
+                seasons.Count > 0)
+            {
+                selectedSeasonId =
+                    seasons[0].Id;
+            }
+        }
+        catch
+        {
+            seasons = new List<SeasonModel>();
+            gameForms = new List<GameFormModel>();
+            submissions = new List<SubmissionModel>();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void SelectSeason(
+        int seasonId)
+    {
+        selectedSeasonId = seasonId;
+        selectedFilter = "Pit";
+    }
+
+    private void SetFilter(
+        string filter)
+    {
+        selectedFilter = filter;
+    }
+
+    private bool IsPitSubmission(
+        SubmissionModel submission)
+    {
+        return gameForms.Any(
+            form =>
+                form.Id ==
+                submission.GameFormId &&
+                IsPitForm(form)
+        );
+    }
+
+    private bool IsMatchSubmission(
+        SubmissionModel submission)
+    {
+        return gameForms.Any(
+            form =>
+                form.Id ==
+                submission.GameFormId &&
+                IsMatchForm(form)
+        );
+    }
+
+  private bool IsPitForm(
+    GameFormModel form)
+{
+    return form.FormType == 0;
+}
+
+private bool IsMatchForm(
+    GameFormModel form)
+{
+    return form.FormType == 1;
+}
+
+    private string GetSeasonButtonClass(
+        int seasonId)
+    {
+        return selectedSeasonId == seasonId
+            ? "btn-primary"
+            : "btn-outline-primary";
+    }
+
+    private string GetFilterButtonClass(
+        string filter)
+    {
+        return selectedFilter == filter
+            ? "btn-primary"
+            : "btn-outline-primary";
+    }
+}

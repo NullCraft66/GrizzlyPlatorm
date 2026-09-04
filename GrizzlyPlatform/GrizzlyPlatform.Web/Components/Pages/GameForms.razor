@@ -1,0 +1,1250 @@
+@page "/gameforms"
+@inject HttpClient Http
+@inject IJSRuntime JS
+@using System.Net.Http.Json
+@using GrizzlyPlatform.Web.Models
+
+<PageTitle>Game Forms</PageTitle>
+
+<div class="game-forms-page">
+
+    <div class="page-header">
+        <div>
+            <h1>Game Forms</h1>
+            <p class="text-muted">
+                Manage the scouting forms used by GrizzlyPlatform.
+            </p>
+        </div>
+
+        @if (!editing)
+        {
+            <button class="btn btn-primary" @onclick="StartCreate">
+                + New Game Form
+            </button>
+        }
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="alert alert-danger">
+            @errorMessage
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(successMessage))
+    {
+        <div class="alert alert-success">
+            @successMessage
+        </div>
+    }
+
+    @if (editing)
+    {
+        <div class="card editor-card">
+            <div class="card-body">
+
+                <h2>
+                    @(editingForm!.Id == 0
+                        ? "Create Game Form"
+                        : "Edit Game Form")
+                </h2>
+
+                <div class="mb-3">
+                    <label class="form-label">Name</label>
+                    <input class="form-control"
+                           @bind="editingForm.Name" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-control"
+                              rows="3"
+                              @bind="editingForm.Description">
+                    </textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Season</label>
+
+                    <select class="form-select"
+                            @bind="editingForm.SeasonId">
+
+                        <option value="0">Select a season...</option>
+
+                        @foreach (var season in seasons)
+                        {
+                            <option value="@season.Id">
+                                @season.Name (@season.Year)
+                            </option>
+                        }
+
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Form Type</label>
+
+                    <select class="form-select"
+                            @bind="editingForm.FormType">
+
+                        <option value="0">Pit Scouting</option>
+                        <option value="1">Match Scouting</option>
+
+                    </select>
+                </div>
+
+                <hr />
+
+                @if (editingForm.Id != 0)
+                {
+                    <div class="fields-editor">
+
+                        <div class="fields-editor-header">
+                            <div>
+                                <h3>Fields</h3>
+                                <p class="text-muted">
+                                    Configure the questions used by this scouting form.
+                                </p>
+                            </div>
+
+                            <button class="btn btn-success"
+                                    @onclick="StartAddField">
+                                + Add Field
+                            </button>
+                        </div>
+
+                        @if (editingForm.Fields.Count == 0)
+                        {
+                            <div class="alert alert-info">
+                                This form has no fields yet.
+                            </div>
+                        }
+                        else
+                        {
+                            @foreach (var field in editingForm.Fields.OrderBy(f => f.DisplayOrder))
+                            {
+                                <div class="field-editor-card">
+
+                                    <div class="field-editor-main">
+
+                                        <div class="field-editor-number">
+                                            @field.DisplayOrder
+                                        </div>
+
+                                        <div class="field-editor-content">
+
+                                            <div class="field-title-row">
+                                                <h4>@field.Question</h4>
+
+                                                @if (field.Required)
+                                                {
+                                                    <span class="badge bg-danger">
+                                                        Required
+                                                    </span>
+                                                }
+
+                                                @if (field.IsSystemField)
+                                                {
+                                                    <span class="badge bg-dark">
+                                                        System
+                                                    </span>
+                                                }
+                                            </div>
+
+                                            @if (!string.IsNullOrWhiteSpace(field.Description))
+                                            {
+                                                <p class="text-muted">
+                                                    @field.Description
+                                                </p>
+                                            }
+
+                                            <div>
+                                                <strong>Type:</strong>
+                                                @GetFieldTypeName(field.FieldType)
+                                            </div>
+
+                                            @if (field.Options.Count > 0)
+                                            {
+                                                <div class="mt-2">
+                                                    <strong>Options:</strong>
+
+                                                    <ul>
+                                                        @foreach (var option in field.Options.OrderBy(o => o.DisplayOrder))
+                                                        {
+                                                            <li>
+                                                                @option.Value
+                                                            </li>
+                                                        }
+                                                    </ul>
+                                                </div>
+                                            }
+
+                                        </div>
+
+                                    </div>
+
+                                    <div class="field-editor-actions">
+
+                                        @if (!field.IsSystemField)
+                                        {
+                                            <button class="btn btn-sm btn-outline-primary"
+                                                    @onclick="() => StartEditField(field)">
+                                                Edit
+                                            </button>
+
+                                            <button class="btn btn-sm btn-outline-danger"
+                                                    @onclick="() => DeleteField(field)">
+                                                Delete
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">
+                                                System field
+                                            </span>
+                                        }
+
+                                    </div>
+
+                                </div>
+                            }
+                        }
+
+                    </div>
+                }
+
+                <div class="editor-actions mt-4">
+
+                    <button class="btn btn-primary"
+                            @onclick="SaveForm">
+                        Save Form
+                    </button>
+
+                    <button class="btn btn-secondary"
+                            @onclick="CancelEdit">
+                        Cancel
+                    </button>
+
+                </div>
+
+            </div>
+        </div>
+    }
+    else
+    {
+        @if (gameForms == null)
+        {
+            <div class="loading-message">
+                <p>Loading game forms...</p>
+            </div>
+        }
+        else if (gameForms.Count == 0)
+        {
+            <div class="alert alert-info">
+                No game forms were found.
+            </div>
+        }
+        else
+        {
+            <div class="forms-list">
+
+                @foreach (var form in gameForms)
+                {
+                    <div class="card form-card">
+
+                        <div class="card-body">
+
+                            <div class="form-header">
+
+                                <div>
+                                    <h2 class="form-title">
+                                        @form.Name
+                                    </h2>
+
+                                    @if (!string.IsNullOrWhiteSpace(form.Description))
+                                    {
+                                        <p class="form-description">
+                                            @form.Description
+                                        </p>
+                                    }
+                                </div>
+
+                                <div class="form-actions">
+
+                                    <span class="badge bg-primary">
+                                        Season @form.SeasonId
+                                    </span>
+
+                                    <span class="badge bg-secondary">
+                                        @GetFormTypeName(form.FormType)
+                                    </span>
+
+                                    <button class="btn btn-sm @(IsFormActive(form) ? "btn-success" : "btn-outline-success")"
+                                            @onclick="() => ToggleActiveForm(form)">
+                                        @(IsFormActive(form)
+                                            ? "Active on Devices"
+                                            : "Set Active on Devices")
+                                    </button>
+
+                                    <button class="btn btn-sm btn-outline-primary"
+                                            @onclick="() => StartEdit(form)">
+                                        Edit
+                                    </button>
+
+                                    <button class="btn btn-sm btn-outline-danger"
+                                            @onclick="() => DeleteForm(form)">
+                                        Delete
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+                            <hr />
+
+                            <div class="fields-header">
+                                <h3>Fields</h3>
+
+                                <span class="text-muted">
+                                    @form.Fields.Count
+                                    field@(form.Fields.Count == 1 ? "" : "s")
+                                </span>
+                            </div>
+
+                            @if (form.Fields.Count == 0)
+                            {
+                                <p class="text-muted">
+                                    This form has no fields.
+                                </p>
+                            }
+                            else
+                            {
+                                <div class="fields-list">
+
+                                    @foreach (var field in form.Fields.OrderBy(f => f.DisplayOrder))
+                                    {
+                                        <div class="field-card">
+
+                                            <div class="field-number">
+                                                @field.DisplayOrder
+                                            </div>
+
+                                            <div class="field-content">
+
+                                                <div class="field-title-row">
+
+                                                    <h4>
+                                                        @field.Question
+                                                    </h4>
+
+                                                    @if (field.Required)
+                                                    {
+                                                        <span class="badge bg-danger">
+                                                            Required
+                                                        </span>
+                                                    }
+
+                                                    @if (field.IsSystemField)
+                                                    {
+                                                        <span class="badge bg-dark">
+                                                            System
+                                                        </span>
+                                                    }
+
+                                                </div>
+
+                                                @if (!string.IsNullOrWhiteSpace(field.Description))
+                                                {
+                                                    <p class="field-description">
+                                                        @field.Description
+                                                    </p>
+                                                }
+
+                                                <div class="field-type">
+                                                    <strong>Type:</strong>
+                                                    @GetFieldTypeName(field.FieldType)
+                                                </div>
+
+                                                @if (field.Options.Count > 0)
+                                                {
+                                                    <div class="field-options">
+                                                        <strong>Options:</strong>
+
+                                                        <ul>
+                                                            @foreach (var option in field.Options.OrderBy(o => o.DisplayOrder))
+                                                            {
+                                                                <li>@option.Value</li>
+                                                            }
+                                                        </ul>
+                                                    </div>
+                                                }
+
+                                            </div>
+
+                                        </div>
+                                    }
+
+                                </div>
+                            }
+
+                        </div>
+
+                    </div>
+                }
+
+            </div>
+        }
+    }
+
+</div>
+
+@if (editingField != null)
+{
+    <div class="modal-backdrop-custom">
+
+        <div class="field-modal">
+
+            <h2>
+                @(editingField.Id == 0
+                    ? "Add Field"
+                    : "Edit Field")
+            </h2>
+
+            <div class="mb-3">
+                <label class="form-label">Question</label>
+
+                <input class="form-control"
+                       @bind="editingField.Question" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Description</label>
+
+                <textarea class="form-control"
+                          rows="2"
+                          @bind="editingField.Description">
+                </textarea>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Field Type</label>
+
+                <select class="form-select"
+                        @bind="editingField.FieldType">
+
+                    <option value="0">Text</option>
+                    <option value="1">Number</option>
+                    <option value="2">Yes / No</option>
+                    <option value="3">Dropdown</option>
+                    <option value="4">Checkbox</option>
+                    <option value="5">Multi-Select</option>
+
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Display Order</label>
+
+                <input class="form-control"
+                       type="number"
+                       @bind="editingField.DisplayOrder" />
+            </div>
+
+            <div class="form-check mb-3">
+
+                <input class="form-check-input"
+                       type="checkbox"
+                       @bind="editingField.Required" />
+
+                <label class="form-check-label">
+                    Required
+                </label>
+
+            </div>
+
+            @if (editingField.FieldType == 3 ||
+                 editingField.FieldType == 5)
+            {
+                <div class="options-editor">
+
+                    <div class="options-header">
+
+                        <div>
+                            <h3>
+                                @(editingField.FieldType == 3
+                                    ? "Dropdown Options"
+                                    : "Multi-Select Options")
+                            </h3>
+
+                            <p class="options-help">
+                                These are the choices scouts will see.
+                            </p>
+                        </div>
+
+                        <button class="btn btn-sm btn-success"
+                                @onclick="AddOption">
+                            + Add Option
+                        </button>
+
+                    </div>
+
+                    @if (editingField.Options.Count == 0)
+                    {
+                        <div class="options-empty">
+
+                            <p>
+                                No options have been added yet.
+                            </p>
+
+                            <button class="btn btn-outline-success btn-sm"
+                                    @onclick="AddOption">
+                                + Add Your First Option
+                            </button>
+
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="option-list">
+
+                            @foreach (var option in editingField.Options
+                                .OrderBy(o => o.DisplayOrder))
+                            {
+                                <div class="option-row">
+
+                                    <div class="option-number">
+                                        @option.DisplayOrder
+                                    </div>
+
+                                    <div class="option-input">
+
+                                        <label>
+                                            Option @option.DisplayOrder
+                                        </label>
+
+                                        <input class="form-control"
+                                               placeholder="Enter an option..."
+                                               @bind="option.Value" />
+
+                                    </div>
+
+                                    <button class="btn btn-sm btn-outline-danger option-delete"
+                                            @onclick="() => RemoveOption(option)">
+                                        Delete
+                                    </button>
+
+                                </div>
+                            }
+
+                        </div>
+                    }
+
+                </div>
+            }
+
+            <div class="field-preview">
+
+                <div class="field-preview-header">
+                    <h3>Preview</h3>
+
+                    <span class="text-muted">
+                        What scouts will see
+                    </span>
+                </div>
+
+                <div class="preview-card">
+
+                    <label class="preview-label">
+                        @editingField.Question
+
+                        @if (editingField.Required)
+                        {
+                            <span class="text-danger">*</span>
+                        }
+                    </label>
+
+                    @if (editingField.FieldType == 0)
+                    {
+                        <input class="form-control"
+                               type="text"
+                               placeholder="Enter your answer..."
+                               disabled />
+                    }
+                    else if (editingField.FieldType == 1)
+                    {
+                        <input class="form-control"
+                               type="number"
+                               placeholder="Enter a number..."
+                               disabled />
+                    }
+                    else if (editingField.FieldType == 2)
+                    {
+                        <div class="preview-radio-group">
+
+                            <div class="form-check">
+                                <input class="form-check-input"
+                                       type="radio"
+                                       name="previewYesNo"
+                                       disabled />
+
+                                <label class="form-check-label">
+                                    Yes
+                                </label>
+                            </div>
+
+                            <div class="form-check">
+                                <input class="form-check-input"
+                                       type="radio"
+                                       name="previewYesNo"
+                                       disabled />
+
+                                <label class="form-check-label">
+                                    No
+                                </label>
+                            </div>
+
+                        </div>
+                    }
+                    else if (editingField.FieldType == 3)
+                    {
+                        <select class="form-select"
+                                disabled>
+
+                            <option value="">
+                                Select an option...
+                            </option>
+
+                            @foreach (var option in editingField.Options
+                                .OrderBy(o => o.DisplayOrder))
+                            {
+                                <option value="@option.Value">
+                                    @(
+                                        string.IsNullOrWhiteSpace(option.Value)
+                                            ? $"Option {option.DisplayOrder}"
+                                            : option.Value
+                                    )
+                                </option>
+                            }
+
+                        </select>
+                    }
+                    else if (editingField.FieldType == 4)
+                    {
+                        <div class="form-check">
+
+                            <input class="form-check-input"
+                                   type="checkbox"
+                                   disabled />
+
+                            <label class="form-check-label">
+                                Yes
+                            </label>
+
+                        </div>
+                    }
+                    else if (editingField.FieldType == 5)
+                    {
+                        <div class="preview-checkboxes">
+
+                            @foreach (var option in editingField.Options
+                                .OrderBy(o => o.DisplayOrder))
+                            {
+                                <div class="form-check">
+
+                                    <input class="form-check-input"
+                                           type="checkbox"
+                                           disabled />
+
+                                    <label class="form-check-label">
+                                        @(
+                                            string.IsNullOrWhiteSpace(option.Value)
+                                                ? $"Option {option.DisplayOrder}"
+                                                : option.Value
+                                        )
+                                    </label>
+
+                                </div>
+                            }
+
+                        </div>
+                    }
+
+                </div>
+
+            </div>
+            <div class="modal-actions">
+
+                <button class="btn btn-primary"
+                        @onclick="SaveField">
+                    Save Field
+                </button>
+
+                <button class="btn btn-secondary"
+                        @onclick="CancelFieldEdit">
+                    Cancel
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+}
+@code {
+
+    private List<GameFormModel>? gameForms;
+
+    private List<SeasonModel> seasons = new();
+
+    private GameFormModel? editingForm;
+
+    private GameFormFieldModel? editingField;
+
+    private bool editing;
+
+    private bool newField;
+
+    private string? errorMessage;
+    private string? successMessage;
+
+    private int? activePitFormId;
+    private int? activeMatchFormId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            gameForms =
+                await Http.GetFromJsonAsync<List<GameFormModel>>(
+                    "api/GameForms");
+
+            seasons =
+                await Http.GetFromJsonAsync<List<SeasonModel>>(
+                    "api/Seasons")
+                ?? new List<SeasonModel>();
+
+            var activeConfiguration =
+                await Http.GetFromJsonAsync<ActiveScoutingConfigurationModel>(
+                    "api/ActiveScoutingConfiguration");
+
+            activePitFormId =
+                activeConfiguration?.ActivePitFormId;
+
+            activeMatchFormId =
+                activeConfiguration?.ActiveMatchFormId;
+
+            errorMessage = null;
+        }
+        catch (Exception ex)
+        {
+            errorMessage =
+                $"Failed to load game forms: {ex.Message}";
+        }
+    }
+
+    private bool IsFormActive(GameFormModel form)
+    {
+        return form.FormType == 0
+            ? activePitFormId == form.Id
+            : activeMatchFormId == form.Id;
+    }
+
+    private async Task ToggleActiveForm(GameFormModel form)
+    {
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            int? nextPitFormId = activePitFormId;
+            int? nextMatchFormId = activeMatchFormId;
+
+            if (form.FormType == 0)
+            {
+                nextPitFormId =
+                    activePitFormId == form.Id
+                        ? null
+                        : form.Id;
+            }
+            else
+            {
+                nextMatchFormId =
+                    activeMatchFormId == form.Id
+                        ? null
+                        : form.Id;
+            }
+
+            var configuration = new
+            {
+                activePitFormId = nextPitFormId,
+                activeMatchFormId = nextMatchFormId
+            };
+
+            var response =
+                await Http.PutAsJsonAsync(
+                    "api/ActiveScoutingConfiguration",
+                    configuration);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                errorMessage =
+                    await response.Content.ReadAsStringAsync();
+
+                return;
+            }
+
+            activePitFormId = nextPitFormId;
+            activeMatchFormId = nextMatchFormId;
+
+            successMessage =
+                IsFormActive(form)
+                    ? $"'{form.Name}' is now active on scouting devices."
+                    : $"'{form.Name}' was removed from scouting devices.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage =
+                $"Failed to update active scouting form: {ex.Message}";
+        }
+    }
+
+    private void StartCreate()
+    {
+        errorMessage = null;
+        successMessage = null;
+
+        editingForm = new GameFormModel
+        {
+            Id = 0,
+            SeasonId = 0,
+            Name = "",
+            Description = "",
+            FormType = 0,
+            Fields = new List<GameFormFieldModel>()
+        };
+
+        editing = true;
+    }
+
+    private void StartEdit(GameFormModel form)
+    {
+        errorMessage = null;
+        successMessage = null;
+
+        editingForm = new GameFormModel
+        {
+            Id = form.Id,
+            SeasonId = form.SeasonId,
+            Name = form.Name,
+            Description = form.Description,
+            FormType = form.FormType,
+            Fields = form.Fields
+        };
+
+        editing = true;
+    }
+
+    private void CancelEdit()
+    {
+        editingForm = null;
+        editingField = null;
+        editing = false;
+    }
+
+    private async Task SaveForm()
+    {
+        if (editingForm == null)
+        {
+            return;
+        }
+
+        errorMessage = null;
+        successMessage = null;
+
+        if (string.IsNullOrWhiteSpace(editingForm.Name))
+        {
+            errorMessage = "A form name is required.";
+            return;
+        }
+
+        if (editingForm.SeasonId <= 0)
+        {
+            errorMessage = "Please select a season.";
+            return;
+        }
+
+        try
+        {
+            HttpResponseMessage response;
+
+            if (editingForm.Id == 0)
+            {
+                response = await Http.PostAsJsonAsync(
+                    "api/GameForms",
+                    editingForm);
+            }
+            else
+            {
+                response = await Http.PutAsJsonAsync(
+                    $"api/GameForms/{editingForm.Id}",
+                    editingForm);
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var message =
+                    await response.Content.ReadAsStringAsync();
+
+                errorMessage =
+                    $"Failed to save form: {message}";
+
+                return;
+            }
+
+            editing = false;
+            editingForm = null;
+
+            successMessage = "Game form saved successfully.";
+
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            errorMessage =
+                $"Failed to save form: {ex.Message}";
+        }
+    }
+
+    private async Task DeleteForm(GameFormModel form)
+    {
+        var confirmed = await JS.InvokeAsync<bool>(
+            "confirm",
+            $"Are you sure you want to delete '{form.Name}'? This cannot be undone.");
+
+        if (!confirmed)
+        {
+            return;
+        }
+
+        try
+        {
+            var response =
+                await Http.DeleteAsync(
+                    $"api/GameForms/{form.Id}");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                errorMessage =
+                    await response.Content.ReadAsStringAsync();
+
+                return;
+            }
+
+            successMessage =
+                $"Deleted '{form.Name}'.";
+
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            errorMessage =
+                $"Failed to delete form: {ex.Message}";
+        }
+    }
+
+    private void StartAddField()
+    {
+        if (editingForm == null)
+        {
+            return;
+        }
+
+        var nextOrder =
+            editingForm.Fields.Count == 0
+                ? 1
+                : editingForm.Fields.Max(f => f.DisplayOrder) + 1;
+
+        editingField = new GameFormFieldModel
+        {
+            Id = 0,
+            Question = "",
+            Description = "",
+            FieldType = 0,
+            Required = false,
+            DisplayOrder = nextOrder,
+            IsSystemField = false,
+            Options = new List<GameFormFieldOptionModel>()
+        };
+
+        newField = true;
+    }
+
+    private void StartEditField(GameFormFieldModel field)
+    {
+        editingField = new GameFormFieldModel
+        {
+            Id = field.Id,
+            Question = field.Question,
+            Description = field.Description,
+            FieldType = field.FieldType,
+            Required = field.Required,
+            DisplayOrder = field.DisplayOrder,
+            IsSystemField = field.IsSystemField,
+            Options = field.Options
+                .Select(o => new GameFormFieldOptionModel
+                {
+                    Id = o.Id,
+                    Value = o.Value,
+                    DisplayOrder = o.DisplayOrder
+                })
+                .ToList()
+        };
+
+        newField = false;
+    }
+
+    private void CancelFieldEdit()
+    {
+        editingField = null;
+    }
+
+  private void AddOption()
+{
+    if (editingField == null)
+    {
+        return;
+    }
+
+    var newOption = new GameFormFieldOptionModel
+    {
+        Id = 0,
+        Value = "",
+        DisplayOrder = editingField.Options.Count + 1
+    };
+
+    editingField.Options.Add(newOption);
+}
+
+  private void RemoveOption(GameFormFieldOptionModel option)
+{
+    if (editingField == null)
+    {
+        return;
+    }
+
+    editingField.Options.Remove(option);
+
+    // Re-number the remaining options automatically.
+    var orderedOptions = editingField.Options
+        .OrderBy(o => o.DisplayOrder)
+        .ToList();
+
+    for (var i = 0; i < orderedOptions.Count; i++)
+    {
+        orderedOptions[i].DisplayOrder = i + 1;
+    }
+}
+
+private async Task SaveField()
+{
+    if (editingForm == null || editingField == null)
+    {
+        return;
+    }
+
+    if (string.IsNullOrWhiteSpace(editingField.Question))
+    {
+        errorMessage = "A field question is required.";
+        return;
+    }
+
+    errorMessage = null;
+
+    try
+    {
+        if (newField)
+        {
+            var fieldToCreate = new
+            {
+                GameFormId = editingForm.Id,
+                Question = editingField.Question,
+                Description = editingField.Description,
+                FieldType = editingField.FieldType,
+                Required = editingField.Required,
+                DisplayOrder = editingField.DisplayOrder,
+                IsSystemField = false
+            };
+
+            var response =
+                await Http.PostAsJsonAsync(
+                    $"api/GameForms/{editingForm.Id}/fields",
+                    fieldToCreate);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                errorMessage =
+                    await response.Content.ReadAsStringAsync();
+
+                return;
+            }
+        }
+        else
+        {
+            var response =
+                await Http.PutAsJsonAsync(
+                    $"api/GameForms/fields/{editingField.Id}",
+                    editingField);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                errorMessage =
+                    await response.Content.ReadAsStringAsync();
+
+                return;
+            }
+        }
+
+        // Close the field editor immediately after a successful save.
+        editingField = null;
+
+        successMessage = "Field saved successfully.";
+
+        // Reload the form after the modal has closed.
+        await ReloadCurrentForm();
+    }
+    catch (Exception ex)
+    {
+        errorMessage =
+            $"Failed to save field: {ex.Message}";
+    }
+}
+
+    private async Task DeleteField(GameFormFieldModel field)
+    {
+        var confirmed = await JS.InvokeAsync<bool>(
+            "confirm",
+            $"Are you sure you want to delete '{field.Question}'? This cannot be undone.");
+
+        if (!confirmed)
+        {
+            return;
+        }
+
+        try
+        {
+            var response =
+                await Http.DeleteAsync(
+                    $"api/GameForms/fields/{field.Id}");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                errorMessage =
+                    await response.Content.ReadAsStringAsync();
+
+                return;
+            }
+
+            if (editingForm != null)
+            {
+                editingForm.Fields.Remove(field);
+
+                var orderedFields = editingForm.Fields
+                    .OrderBy(f => f.DisplayOrder)
+                    .ToList();
+
+                var order = 1;
+
+                foreach (var remainingField in orderedFields)
+                {
+                    remainingField.DisplayOrder = order++;
+
+                    if (!remainingField.IsSystemField)
+                    {
+                        var updateResponse =
+                            await Http.PutAsJsonAsync(
+                                $"api/GameForms/fields/{remainingField.Id}",
+                                remainingField);
+
+                        if (!updateResponse.IsSuccessStatusCode)
+                        {
+                            errorMessage =
+                                await updateResponse.Content.ReadAsStringAsync();
+
+                            return;
+                        }
+                    }
+                }
+            }
+
+            successMessage = "Field deleted and questions renumbered.";
+
+            await ReloadCurrentForm();
+        }
+        catch (Exception ex)
+        {
+            errorMessage =
+                $"Failed to delete field: {ex.Message}";
+        }
+    }
+
+    private string GetFieldTypeName(int fieldType)
+    {
+        return fieldType switch
+        {
+            0 => "Text",
+            1 => "Number",
+            2 => "Yes / No",
+            3 => "Dropdown",
+            4 => "Checkbox",
+            5 => "Multi-Select",
+            _ => "Unknown"
+        };
+    }
+
+    private string GetFormTypeName(int formType)
+    {
+        return formType switch
+        {
+            0 => "Pit Scouting",
+            1 => "Match Scouting",
+            _ => "Unknown"
+        };
+    }
+
+    private async Task ReloadCurrentForm()
+    {
+        if (editingForm == null)
+        {
+            return;
+        }
+
+        try
+        {
+            var form =
+                await Http.GetFromJsonAsync<GameFormModel>(
+                    $"api/GameForms/{editingForm.Id}");
+
+            if (form != null)
+            {
+                editingForm = form;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage =
+                $"Failed to reload form: {ex.Message}";
+        }
+    }
+
+    private sealed class ActiveScoutingConfigurationModel
+    {
+        public int? ActivePitFormId { get; set; }
+        public int? ActiveMatchFormId { get; set; }
+    }
+
+}

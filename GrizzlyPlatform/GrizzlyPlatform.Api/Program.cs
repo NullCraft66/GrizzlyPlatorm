@@ -13,6 +13,8 @@ builder.Services.AddHttpClient<TheBlueAllianceService>(client =>
     client.BaseAddress = new Uri("https://www.thebluealliance.com/api/v3/");
 });
 
+builder.Services.AddHostedService<LiveEventSyncService>();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("ScoutingClients", policy =>

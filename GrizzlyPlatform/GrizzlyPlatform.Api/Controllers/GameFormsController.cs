@@ -112,28 +112,94 @@ public async Task<IActionResult> GetGameForm(int id)
     return Ok(result);
 }
 
-    // POST: api/GameForms
-    [HttpPost]
-    public async Task<IActionResult> CreateGameForm(GameForm gameForm)
+  // POST: api/GameForms
+[HttpPost]
+public async Task<IActionResult> CreateGameForm(GameForm gameForm)
+{
+    var season = await _context.Seasons
+        .FindAsync(gameForm.SeasonId);
+
+    if (season == null)
     {
-        var season = await _context.Seasons
-            .FindAsync(gameForm.SeasonId);
-
-        if (season == null)
-        {
-            return BadRequest(
-                "The specified season does not exist.");
-        }
-
-        _context.GameForms.Add(gameForm);
-
-        await _context.SaveChangesAsync();
-
-        return CreatedAtAction(
-            nameof(GetGameForm),
-            new { id = gameForm.Id },
-            gameForm);
+        return BadRequest(
+            "The specified season does not exist.");
     }
+
+// Automatically add required system fields.
+if (gameForm.FormType == GameFormType.Pit)
+{
+    gameForm.Fields.Add(new GameFormField
+    {
+        Question = "Scout Name",
+        Description = "Name or initials of the person conducting the pit scouting.",
+        FieldType = GameFormFieldType.Text,
+        Required = true,
+        DisplayOrder = 1,
+        IsSystemField = true
+    });
+
+    gameForm.Fields.Add(new GameFormField
+    {
+        Question = "Team Number",
+        Description = "FRC team number being scouted.",
+        FieldType = GameFormFieldType.Number,
+        Required = true,
+        DisplayOrder = 2,
+        IsSystemField = true
+    });
+
+    gameForm.Fields.Add(new GameFormField
+    {
+        Question = "Team Name",
+        Description = "Name of the team being scouted.",
+        FieldType = GameFormFieldType.Text,
+        Required = true,
+        DisplayOrder = 3,
+        IsSystemField = true
+    });
+}
+else if (gameForm.FormType == GameFormType.Match)
+{
+    gameForm.Fields.Add(new GameFormField
+    {
+        Question = "Scout Name",
+        Description = "Name or initials of the person conducting the match scouting.",
+        FieldType = GameFormFieldType.Text,
+        Required = true,
+        DisplayOrder = 1,
+        IsSystemField = true
+    });
+
+    gameForm.Fields.Add(new GameFormField
+    {
+        Question = "Match Number",
+        Description = "Match number being scouted.",
+        FieldType = GameFormFieldType.Number,
+        Required = true,
+        DisplayOrder = 2,
+        IsSystemField = true
+    });
+
+    gameForm.Fields.Add(new GameFormField
+    {
+        Question = "Team Number",
+        Description = "FRC team number being scouted.",
+        FieldType = GameFormFieldType.Number,
+        Required = true,
+        DisplayOrder = 3,
+        IsSystemField = true
+    });
+}
+
+    _context.GameForms.Add(gameForm);
+
+    await _context.SaveChangesAsync();
+
+    return CreatedAtAction(
+        nameof(GetGameForm),
+        new { id = gameForm.Id },
+        gameForm);
+}
 
     // PUT: api/GameForms/1
     [HttpPut("{id}")]
@@ -206,47 +272,92 @@ public async Task<IActionResult> GetGameForm(int id)
         return Ok(field);
     }
 
-    // PUT: api/GameForms/fields/7
-    [HttpPut("fields/{fieldId}")]
-    public async Task<IActionResult> UpdateField(
-        int fieldId,
-        GameFormField updatedField)
+// PUT: api/GameForms/fields/7
+[HttpPut("fields/{fieldId}")]
+public async Task<IActionResult> UpdateField(
+    int fieldId,
+    GameFormField updatedField)
+{
+    var field = await _context.GameFormFields
+        .Include(f => f.Options)
+        .FirstOrDefaultAsync(f => f.Id == fieldId);
+
+    if (field == null)
     {
-        var field = await _context.GameFormFields
-            .Include(f => f.Options)
-            .FirstOrDefaultAsync(f => f.Id == fieldId);
-
-        if (field == null)
-        {
-            return NotFound();
-        }
-
-        // System fields cannot be modified.
-        if (field.IsSystemField)
-        {
-            return BadRequest(
-                "System fields cannot be modified.");
-        }
-
-        field.Question = updatedField.Question;
-        field.Description = updatedField.Description;
-        field.FieldType = updatedField.FieldType;
-        field.Required = updatedField.Required;
-        field.DisplayOrder = updatedField.DisplayOrder;
-
-        // Only Dropdown and MultiSelect fields can have options.
-        if (field.FieldType != GameFormFieldType.Dropdown &&
-            field.FieldType != GameFormFieldType.MultiSelect)
-        {
-            field.Options.Clear();
-        }
-
-        await _context.SaveChangesAsync();
-
-        return Ok(field);
+        return NotFound();
     }
 
-    // POST: api/GameForms/fields/7/options
+    // System fields cannot be modified.
+    if (field.IsSystemField)
+    {
+        return BadRequest(
+            "System fields cannot be modified.");
+    }
+
+    field.Question = updatedField.Question;
+    field.Description = updatedField.Description;
+    field.FieldType = updatedField.FieldType;
+    field.Required = updatedField.Required;
+    field.DisplayOrder = updatedField.DisplayOrder;
+
+    // Only Dropdown and MultiSelect fields can have options.
+    if (field.FieldType != GameFormFieldType.Dropdown &&
+        field.FieldType != GameFormFieldType.MultiSelect)
+    {
+        _context.GameFormFieldOptions.RemoveRange(field.Options);
+    }
+    else
+    {
+        // Remove options that no longer exist in the submitted list.
+        var updatedOptionIds = updatedField.Options
+            .Where(o => o.Id > 0)
+            .Select(o => o.Id)
+            .ToHashSet();
+
+        var optionsToRemove = field.Options
+            .Where(o => !updatedOptionIds.Contains(o.Id))
+            .ToList();
+
+        _context.GameFormFieldOptions.RemoveRange(optionsToRemove);
+
+        // Update existing options and create new options.
+        foreach (var updatedOption in updatedField.Options)
+        {
+            if (updatedOption.Id > 0)
+            {
+                var existingOption = field.Options
+                    .FirstOrDefault(o => o.Id == updatedOption.Id);
+
+                if (existingOption != null)
+                {
+                    existingOption.Value = updatedOption.Value;
+                    existingOption.DisplayOrder =
+                        updatedOption.DisplayOrder;
+                }
+            }
+            else
+            {
+                var newOption = new GameFormFieldOption
+                {
+                    GameFormFieldId = field.Id,
+                    Value = updatedOption.Value,
+                    DisplayOrder = updatedOption.DisplayOrder
+                };
+
+                _context.GameFormFieldOptions.Add(newOption);
+            }
+        }
+    }
+
+    await _context.SaveChangesAsync();
+
+    // Return the updated field including its options.
+    await _context.Entry(field)
+        .Collection(f => f.Options)
+        .LoadAsync();
+
+    return Ok(field);
+}    // POST: api/GameForms/fields/7/options
     [HttpPost("fields/{fieldId}/options")]
     public async Task<IActionResult> CreateFieldOption(
         int fieldId,
@@ -378,10 +489,11 @@ public async Task<IActionResult> GetGameForm(int id)
         return NoContent();
     }
 
-    // POST: api/GameForms/restore-system-fields
-    [HttpPost("restore-system-fields")]
-    public async Task<IActionResult> RestoreSystemFields()
-    {
+  // POST: api/GameForms/restore-system-fields
+[HttpPost("restore-system-fields")]
+[IgnoreAntiforgeryToken]
+public async Task<IActionResult> RestoreSystemFields()
+{
         // PIT SCOUTING SYSTEM FIELDS
 
         var teamNumber = await _context.GameFormFields
@@ -395,7 +507,7 @@ public async Task<IActionResult> GetGameForm(int id)
             teamNumber.FieldType =
                 GameFormFieldType.Number;
             teamNumber.Required = true;
-            teamNumber.DisplayOrder = 1;
+            teamNumber.DisplayOrder = 2;
             teamNumber.IsSystemField = true;
         }
 
@@ -410,7 +522,7 @@ public async Task<IActionResult> GetGameForm(int id)
             teamName.FieldType =
                 GameFormFieldType.Text;
             teamName.Required = true;
-            teamName.DisplayOrder = 2;
+            teamName.DisplayOrder = 3;
             teamName.IsSystemField = true;
         }
 
@@ -425,7 +537,7 @@ public async Task<IActionResult> GetGameForm(int id)
             scoutName.FieldType =
                 GameFormFieldType.Text;
             scoutName.Required = true;
-            scoutName.DisplayOrder = 3;
+            scoutName.DisplayOrder = 1;
             scoutName.IsSystemField = true;
         }
 

@@ -1,0 +1,181 @@
+h1 {
+    margin-bottom: 20px;
+}
+
+/* All buttons */
+button {
+    padding: 8px 14px;
+    border: 1px solid #aaa;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    background: #f0f0f0;
+    color: #222;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+button:hover {
+    background: #dcdcdc;
+    border-color: #777;
+}
+
+button:active {
+    background: #c8c8c8;
+}
+
+/* Add/Edit event form */
+.event-form {
+    margin: 20px 0;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    background: #f7f7f7;
+    max-width: 600px;
+}
+
+.event-form h2 {
+    margin-top: 0;
+}
+
+.event-form > div {
+    margin-bottom: 15px;
+}
+
+.event-form label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.event-form input,
+.event-form select {
+    width: 100%;
+    padding: 9px;
+    border: 1px solid #bbb;
+    border-radius: 5px;
+    box-sizing: border-box;
+}
+
+.event-form button {
+    margin-right: 8px;
+}
+
+/* Seasons */
+.season-section {
+    margin-top: 25px;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.season-section summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 18px;
+    cursor: pointer;
+    background: #f0f0f0;
+}
+
+.season-section summary:hover {
+    background: #e7e7e7;
+}
+
+.season-events {
+    padding: 15px;
+}
+
+/* Event cards */
+.event-card {
+    position: relative;
+    margin-bottom: 20px;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    background: white;
+}
+
+.event-card:last-child {
+    margin-bottom: 0;
+}
+
+.event-card h2 {
+    margin-top: 0;
+}
+
+/* Matches */
+.event-matches {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #ddd;
+}
+
+.event-matches h3 {
+    margin-top: 0;
+}
+
+.match-card {
+    margin: 10px 0;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fafafa;
+}
+
+.match-card h4 {
+    margin-top: 0;
+}
+
+.match-card p {
+    margin: 6px 0;
+}
+
+/* Event action buttons */
+.event-buttons {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 20px;
+}
+
+.event-buttons button {
+    position: relative;
+    z-index: 11;
+}
+
+.event-buttons a {
+    display: inline-block;
+    padding: 8px 14px;
+    border: 1px solid #aaa;
+    border-radius: 6px;
+    text-decoration: none;
+    background: #f0f0f0;
+    color: inherit;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.event-buttons a:hover {
+    background: #dcdcdc;
+    border-color: #777;
+}
+
+/* Delete confirmation */
+.delete-confirmation {
+    position: relative;
+    z-index: 20;
+    margin-top: 25px;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    background: #fff;
+}
+
+.delete-confirmation h2 {
+    margin-top: 0;
+}
+
+.delete-confirmation button {
+    margin-right: 8px;
+}

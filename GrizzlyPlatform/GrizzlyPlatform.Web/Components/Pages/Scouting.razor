@@ -1,0 +1,78 @@
+@page "/scouting"
+@using System.Net.Http.Json
+@using GrizzlyPlatform.Web.Models
+@inject HttpClient Http
+
+<PageTitle>Scouting</PageTitle>
+
+<h1>Scouting</h1>
+
+@if (forms == null)
+{
+    <p>Loading scouting forms...</p>
+}
+else if (forms.Count == 0)
+{
+    <p>No scouting forms are available.</p>
+}
+else
+{
+    <div class="scouting-form-list">
+        @foreach (var form in forms)
+        {
+            <button class="scouting-form-button"
+                    @onclick="() => SelectForm(form)">
+                <strong>@form.Name</strong>
+                <span>@GetFormTypeName(form.FormType)</span>
+            </button>
+        }
+    </div>
+
+    @if (selectedForm != null)
+    {
+        <hr />
+
+        <h2>@selectedForm.Name</h2>
+        <p>@selectedForm.Description</p>
+
+        <p>
+            <strong>Fields:</strong>
+            @selectedForm.Fields.Count
+        </p>
+    }
+}
+
+@code {
+    private List<GameFormModel>? forms;
+    private GameFormModel? selectedForm;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            forms = await Http.GetFromJsonAsync<List<GameFormModel>>(
+                "api/GameForms");
+
+            forms ??= new List<GameFormModel>();
+        }
+        catch
+        {
+            forms = new List<GameFormModel>();
+        }
+    }
+
+    private void SelectForm(GameFormModel form)
+    {
+        selectedForm = form;
+    }
+
+    private static string GetFormTypeName(int formType)
+    {
+        return formType switch
+        {
+            0 => "Pit Scouting",
+            1 => "Match Scouting",
+            _ => "Unknown"
+        };
+    }
+}

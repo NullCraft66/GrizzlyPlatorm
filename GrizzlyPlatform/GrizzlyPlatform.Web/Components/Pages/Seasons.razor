@@ -1,0 +1,208 @@
+@page "/seasons"
+@using System.Net.Http.Json
+@using GrizzlyPlatform.Web.Models
+@inject HttpClient Http
+@inject IJSRuntime JS
+
+<PageTitle>Seasons</PageTitle>
+
+<h1>Season Management</h1>
+
+<p class="text-muted">
+    Create and manage the seasons used throughout GrizzlyPlatform.
+</p>
+
+<div class="season-form card mb-4">
+    <div class="card-body">
+
+        <h4>Add New Season</h4>
+
+        <div class="row g-3">
+
+            <div class="col-md-3">
+                <label class="form-label">Year</label>
+
+                <input type="number"
+                       class="form-control"
+                       @bind="newSeasonYear" />
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Game Name</label>
+
+                <input type="text"
+                       class="form-control"
+                       placeholder="Example: REBUILT"
+                       @bind="newSeasonName" />
+            </div>
+
+            <div class="col-md-3 d-flex align-items-end">
+
+                <button class="btn btn-primary w-100"
+                        @onclick="CreateSeason">
+                    Add Season
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <p>Loading seasons...</p>
+}
+else if (seasons.Count == 0)
+{
+    <div class="alert alert-info">
+        No seasons have been created yet.
+    </div>
+}
+else
+{
+    <div class="card">
+
+        <div class="card-body">
+
+            <h4>Existing Seasons</h4>
+
+            <div class="list-group">
+
+                @foreach (var season in seasons)
+                {
+                    <div class="list-group-item
+                                d-flex
+                                justify-content-between
+                                align-items-center">
+
+                        <div>
+
+                            <strong>
+                                @season.Year
+                            </strong>
+
+                            —
+
+                            @season.Name
+
+                        </div>
+
+                        <button class="btn btn-sm btn-outline-danger"
+                                @onclick="@(() => DeleteSeason(season.Id, season.Name))">
+                            Delete
+                        </button>
+
+                    </div>
+                }
+
+            </div>
+
+        </div>
+
+    </div>
+}
+
+@code {
+
+    private List<SeasonModel> seasons = new();
+
+    private bool isLoading = true;
+
+    private int newSeasonYear =
+        DateTime.Now.Year;
+
+    private string newSeasonName =
+        string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSeasons();
+    }
+
+    private async Task LoadSeasons()
+    {
+        isLoading = true;
+
+        try
+        {
+            seasons =
+                await Http.GetFromJsonAsync<
+                    List<SeasonModel>
+                >(
+                    "api/Seasons"
+                )
+                ?? new List<SeasonModel>();
+        }
+        catch (Exception)
+        {
+            seasons =
+                new List<SeasonModel>();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task CreateSeason()
+    {
+        if (newSeasonYear <= 0)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(newSeasonName))
+        {
+            return;
+        }
+
+        var season =
+            new SeasonModel
+            {
+                Year = newSeasonYear,
+                Name = newSeasonName.Trim()
+            };
+
+        var response =
+            await Http.PostAsJsonAsync(
+                "api/Seasons",
+                season
+            );
+
+        if (response.IsSuccessStatusCode)
+        {
+            newSeasonName =
+                string.Empty;
+
+            await LoadSeasons();
+        }
+    }
+
+    private async Task DeleteSeason(
+        int seasonId,
+        string seasonName)
+    {
+        bool confirmed =
+            await JS.InvokeAsync<bool>(
+                "confirm",
+                $"Delete {seasonName}? This cannot be undone."
+            );
+
+        if (!confirmed)
+        {
+            return;
+        }
+
+        var response =
+            await Http.DeleteAsync(
+                $"api/Seasons/{seasonId}"
+            );
+
+        if (response.IsSuccessStatusCode)
+        {
+            await LoadSeasons();
+        }
+    }
+}

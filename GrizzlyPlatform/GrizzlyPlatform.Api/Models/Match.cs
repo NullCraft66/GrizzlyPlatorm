@@ -9,9 +9,15 @@ public class Match
 
     public string MatchType { get; set; } = "Qualification";
 
-   public int MatchNumber { get; set; }
+    public int MatchNumber { get; set; }
 
-public int SetNumber { get; set; }
+    public int SetNumber { get; set; }
+
+    public int? RedScore { get; set; }
+
+    public int? BlueScore { get; set; }
+
+    public string? WinningAlliance { get; set; }
 
     public int RedTeam1Id { get; set; }
     public Team? RedTeam1 { get; set; }

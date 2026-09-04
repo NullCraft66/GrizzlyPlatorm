@@ -4,14 +4,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddScoped(sp => new HttpClient
 {
-    BaseAddress = new Uri("http://localhost:5263/")
+    BaseAddress = new Uri(
+        builder.Configuration["ApiBaseUrl"]
+        ?? "http://localhost:5263/"
+    )
 });
-
-builder.Services.AddScoped(sp => new HttpClient
-{
-    BaseAddress = new Uri("http://localhost:5263/")
-});
-
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();

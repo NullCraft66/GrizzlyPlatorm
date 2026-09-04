@@ -15,10 +15,159 @@ public class MatchesController : ControllerBase
     {
         _context = context;
     }
-[HttpGet]
-public async Task<IActionResult> GetMatches()
+
+    [HttpGet]
+    public async Task<IActionResult> GetMatches()
+    {
+        var matches = await _context.Matches
+          .Select(m => new
+{
+    m.Id,
+    m.EventId,
+    m.MatchType,
+    m.MatchNumber,
+    m.SetNumber,
+    m.RedScore,
+    m.BlueScore,
+    m.WinningAlliance,
+
+                redTeam1 = new
+                {
+                    m.RedTeam1!.Id,
+                    m.RedTeam1.TeamNumber,
+                    m.RedTeam1.Name
+                },
+
+                redTeam2 = new
+                {
+                    m.RedTeam2!.Id,
+                    m.RedTeam2.TeamNumber,
+                    m.RedTeam2.Name
+                },
+
+                redTeam3 = new
+                {
+                    m.RedTeam3!.Id,
+                    m.RedTeam3.TeamNumber,
+                    m.RedTeam3.Name
+                },
+
+                blueTeam1 = new
+                {
+                    m.BlueTeam1!.Id,
+                    m.BlueTeam1.TeamNumber,
+                    m.BlueTeam1.Name
+                },
+
+                blueTeam2 = new
+                {
+                    m.BlueTeam2!.Id,
+                    m.BlueTeam2.TeamNumber,
+                    m.BlueTeam2.Name
+                },
+
+                blueTeam3 = new
+                {
+                    m.BlueTeam3!.Id,
+                    m.BlueTeam3.TeamNumber,
+                    m.BlueTeam3.Name
+                }
+            })
+            .OrderBy(m =>
+                m.MatchType == "Qualification" ? 1 :
+                m.MatchType == "EighthFinal" ? 2 :
+                m.MatchType == "Quarterfinal" ? 3 :
+                m.MatchType == "Semifinal" ? 4 :
+                m.MatchType == "Final" ? 5 : 6)
+            .ThenBy(m => m.MatchNumber)
+            .ThenBy(m => m.SetNumber)
+            .ToListAsync();
+
+        return Ok(matches);
+    }
+
+    [HttpGet("event/{eventId}")]
+    public async Task<IActionResult> GetMatchesForEvent(int eventId)
+    {
+        var matches = await _context.Matches
+            .Where(m => m.EventId == eventId)
+            .Select(m => new
+            {
+                m.Id,
+                m.EventId,
+                m.MatchType,
+                m.MatchNumber,
+                m.SetNumber,
+
+                m.RedScore,
+                m.BlueScore,
+                m.WinningAlliance,
+
+                redTeam1 = new
+                {
+                    m.RedTeam1!.Id,
+                    m.RedTeam1.TeamNumber,
+                    m.RedTeam1.Name
+                },
+
+                redTeam2 = new
+                {
+                    m.RedTeam2!.Id,
+                    m.RedTeam2.TeamNumber,
+                    m.RedTeam2.Name
+                },
+
+                redTeam3 = new
+                {
+                    m.RedTeam3!.Id,
+                    m.RedTeam3.TeamNumber,
+                    m.RedTeam3.Name
+                },
+
+                blueTeam1 = new
+                {
+                    m.BlueTeam1!.Id,
+                    m.BlueTeam1.TeamNumber,
+                    m.BlueTeam1.Name
+                },
+
+                blueTeam2 = new
+                {
+                    m.BlueTeam2!.Id,
+                    m.BlueTeam2.TeamNumber,
+                    m.BlueTeam2.Name
+                },
+
+                blueTeam3 = new
+                {
+                    m.BlueTeam3!.Id,
+                    m.BlueTeam3.TeamNumber,
+                    m.BlueTeam3.Name
+                }
+            })
+            .OrderBy(m =>
+                m.MatchType == "Qualification" ? 1 :
+                m.MatchType == "EighthFinal" ? 2 :
+                m.MatchType == "Quarterfinal" ? 3 :
+                m.MatchType == "Semifinal" ? 4 :
+                m.MatchType == "Final" ? 5 : 6)
+            .ThenBy(m => m.MatchNumber)
+            .ThenBy(m => m.SetNumber)
+            .ToListAsync();
+
+        return Ok(matches);
+    }
+[HttpGet("team/{teamId}")]
+public async Task<IActionResult> GetMatchesForTeam(int teamId)
 {
     var matches = await _context.Matches
+        .Where(m =>
+            m.RedTeam1Id == teamId ||
+            m.RedTeam2Id == teamId ||
+            m.RedTeam3Id == teamId ||
+            m.BlueTeam1Id == teamId ||
+            m.BlueTeam2Id == teamId ||
+            m.BlueTeam3Id == teamId)
         .Select(m => new
         {
             m.Id,
@@ -26,6 +175,9 @@ public async Task<IActionResult> GetMatches()
             m.MatchType,
             m.MatchNumber,
             m.SetNumber,
+            m.RedScore,
+            m.BlueScore,
+            m.WinningAlliance,
 
             redTeam1 = new
             {
@@ -81,93 +233,29 @@ public async Task<IActionResult> GetMatches()
 
     return Ok(matches);
 }
-    [HttpGet("event/{eventId}")]
-    public async Task<IActionResult> GetMatchesForEvent(int eventId)
-    {
-        var matches = await _context.Matches
-            .Where(m => m.EventId == eventId)
-            .Select(m => new
-            {
-                m.Id,
-                m.EventId,
-               m.MatchType,
-m.MatchNumber,
-m.SetNumber,
-
-                redTeam1 = new
-                {
-                    m.RedTeam1!.Id,
-                    m.RedTeam1.TeamNumber,
-                    m.RedTeam1.Name
-                },
-
-                redTeam2 = new
-                {
-                    m.RedTeam2!.Id,
-                    m.RedTeam2.TeamNumber,
-                    m.RedTeam2.Name
-                },
-
-                redTeam3 = new
-                {
-                    m.RedTeam3!.Id,
-                    m.RedTeam3.TeamNumber,
-                    m.RedTeam3.Name
-                },
-
-                blueTeam1 = new
-                {
-                    m.BlueTeam1!.Id,
-                    m.BlueTeam1.TeamNumber,
-                    m.BlueTeam1.Name
-                },
-
-                blueTeam2 = new
-                {
-                    m.BlueTeam2!.Id,
-                    m.BlueTeam2.TeamNumber,
-                    m.BlueTeam2.Name
-                },
-
-                blueTeam3 = new
-                {
-                    m.BlueTeam3!.Id,
-                    m.BlueTeam3.TeamNumber,
-                    m.BlueTeam3.Name
-                }
-            })
-            .OrderBy(m =>
-    m.MatchType == "Qualification" ? 1 :
-    m.MatchType == "EighthFinal" ? 2 :
-    m.MatchType == "Quarterfinal" ? 3 :
-    m.MatchType == "Semifinal" ? 4 :
-    m.MatchType == "Final" ? 5 : 6)
-.ThenBy(m => m.MatchNumber)
-.ThenBy(m => m.SetNumber)
-            .ToListAsync();
-
-        return Ok(matches);
-    }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetMatch(int id)
     {
         var match = await _context.Matches
             .Where(m => m.Id == id)
-            .Select(m => new
-            {
-                m.Id,
-                m.EventId,
-                m.MatchType,
-                m.MatchNumber,
+          .Select(m => new
+{
+    m.Id,
+    m.EventId,
+    m.MatchType,
+    m.MatchNumber,
+    m.SetNumber,
+    m.RedScore,
+    m.BlueScore,
+    m.WinningAlliance,
 
-                redTeam1 = new
-                {
-                    m.RedTeam1!.Id,
-                    m.RedTeam1.TeamNumber,
-                    m.RedTeam1.Name
-                },
-
+    redTeam1 = new
+    {
+        m.RedTeam1!.Id,
+        m.RedTeam1.TeamNumber,
+        m.RedTeam1.Name
+    },
                 redTeam2 = new
                 {
                     m.RedTeam2!.Id,
@@ -238,9 +326,9 @@ m.SetNumber,
         }
 
         match.EventId = updatedMatch.EventId;
-   match.MatchType = updatedMatch.MatchType;
-match.MatchNumber = updatedMatch.MatchNumber;
-match.SetNumber = updatedMatch.SetNumber;
+        match.MatchType = updatedMatch.MatchType;
+        match.MatchNumber = updatedMatch.MatchNumber;
+        match.SetNumber = updatedMatch.SetNumber;
 
         match.RedTeam1Id = updatedMatch.RedTeam1Id;
         match.RedTeam2Id = updatedMatch.RedTeam2Id;
@@ -249,6 +337,10 @@ match.SetNumber = updatedMatch.SetNumber;
         match.BlueTeam1Id = updatedMatch.BlueTeam1Id;
         match.BlueTeam2Id = updatedMatch.BlueTeam2Id;
         match.BlueTeam3Id = updatedMatch.BlueTeam3Id;
+
+        match.RedScore = updatedMatch.RedScore;
+        match.BlueScore = updatedMatch.BlueScore;
+        match.WinningAlliance = updatedMatch.WinningAlliance;
 
         await _context.SaveChangesAsync();
 

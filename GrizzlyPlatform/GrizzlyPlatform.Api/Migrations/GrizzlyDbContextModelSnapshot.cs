@@ -17,6 +17,27 @@ namespace GrizzlyPlatform.Api.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.11");
 
+            modelBuilder.Entity("GrizzlyPlatform.Api.Models.ActiveScoutingConfiguration", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("ActiveMatchFormId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("ActivePitFormId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActiveMatchFormId");
+
+                    b.HasIndex("ActivePitFormId");
+
+                    b.ToTable("ActiveScoutingConfigurations");
+                });
+
             modelBuilder.Entity("GrizzlyPlatform.Api.Models.Event", b =>
                 {
                     b.Property<int>("Id")
@@ -189,7 +210,7 @@ namespace GrizzlyPlatform.Api.Migrations
                     b.Property<int>("GameFormId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("MatchId")
+                    b.Property<int?>("MatchId")
                         .HasColumnType("INTEGER");
 
                     b.Property<DateTime>("SubmittedAt")
@@ -215,6 +236,9 @@ namespace GrizzlyPlatform.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<int?>("BlueScore")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("BlueTeam1Id")
                         .HasColumnType("INTEGER");
 
@@ -234,6 +258,9 @@ namespace GrizzlyPlatform.Api.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<int?>("RedScore")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("RedTeam1Id")
                         .HasColumnType("INTEGER");
 
@@ -245,6 +272,9 @@ namespace GrizzlyPlatform.Api.Migrations
 
                     b.Property<int>("SetNumber")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("WinningAlliance")
+                        .HasColumnType("TEXT");
 
                     b.HasKey("Id");
 
@@ -304,6 +334,19 @@ namespace GrizzlyPlatform.Api.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Teams");
+                });
+
+            modelBuilder.Entity("GrizzlyPlatform.Api.Models.ActiveScoutingConfiguration", b =>
+                {
+                    b.HasOne("GrizzlyPlatform.Api.Models.GameForm", null)
+                        .WithMany()
+                        .HasForeignKey("ActiveMatchFormId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("GrizzlyPlatform.Api.Models.GameForm", null)
+                        .WithMany()
+                        .HasForeignKey("ActivePitFormId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("GrizzlyPlatform.Api.Models.Event", b =>
@@ -398,9 +441,7 @@ namespace GrizzlyPlatform.Api.Migrations
 
                     b.HasOne("GrizzlyPlatform.Api.Models.Match", "Match")
                         .WithMany()
-                        .HasForeignKey("MatchId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("MatchId");
 
                     b.HasOne("GrizzlyPlatform.Api.Models.Team", "Team")
                         .WithMany()
