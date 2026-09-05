@@ -104,10 +104,9 @@ else
                     <span class="badge bg-primary">
                         Team @submission.TeamNumber
                     </span>
-
-                    <span class="badge bg-secondary">
-                        Form @submission.GameFormId
-                    </span>
+<span class="badge bg-secondary">
+    @GetFormName(submission.GameFormId)
+</span>
 
                     @if (IsPitSubmission(submission))
                     {
@@ -164,7 +163,7 @@ else
     <table class="table table-sm">
         <thead>
             <tr>
-                <th>Field ID</th>
+                <th>Question</th>
                 <th>Answer</th>
             </tr>
         </thead>
@@ -174,16 +173,16 @@ else
             {
                 <tr>
                     <td>
-                        @answer.GameFormFieldId
+                    @GetFieldQuestion(
+    submission.GameFormId,
+    answer.GameFormFieldId)
                     </td>
 
-                    <td>
-                        <input class="form-control"
-                               value="@GetEditedAnswer(answer.GameFormFieldId)"
-                               @oninput="e => UpdateAnswer(
-                                   answer.GameFormFieldId,
-                                   e.Value?.ToString() ?? string.Empty)" />
-                    </td>
+                  <td>
+    @RenderAnswerEditor(
+        submission.GameFormId,
+        answer.GameFormFieldId)
+</td>
                 </tr>
             }
         </tbody>
@@ -209,7 +208,7 @@ else
     <table class="table table-sm">
         <thead>
             <tr>
-                <th>Field ID</th>
+                <th>Question</th>
                 <th>Answer</th>
             </tr>
         </thead>
@@ -219,7 +218,9 @@ else
             {
                 <tr>
                     <td>
-                        @answer.GameFormFieldId
+                       @GetFieldQuestion(
+    submission.GameFormId,
+    answer.GameFormFieldId)
                     </td>
 
                     <td>
@@ -301,7 +302,249 @@ private string GetEditedAnswer(int fieldId)
         ? value
         : string.Empty;
 }
+private string GetFieldQuestion(
+    int gameFormId,
+    int fieldId)
+{
+    var form = gameForms.FirstOrDefault(
+        f => f.Id == gameFormId);
 
+    if (form == null)
+    {
+        return $"Field {fieldId}";
+    }
+
+    var field = form.Fields.FirstOrDefault(
+        f => f.Id == fieldId);
+
+    return field?.Question
+        ?? $"Field {fieldId}";
+}
+
+private RenderFragment RenderAnswerEditor(int gameFormId, int fieldId)
+{
+    return builder =>
+    {
+        var form = gameForms.FirstOrDefault(f => f.Id == gameFormId);
+        var field = form?.Fields.FirstOrDefault(f => f.Id == fieldId);
+
+        if (field == null)
+        {
+            builder.AddContent(0, "Unknown field");
+            return;
+        }
+
+        var value = GetEditedAnswer(fieldId);
+
+        if (field.FieldType == 0)
+        {
+            // Text
+            builder.OpenElement(1, "input");
+            builder.AddAttribute(2, "class", "form-control");
+            builder.AddAttribute(3, "value", value);
+            builder.AddAttribute(
+                4,
+                "oninput",
+                EventCallback.Factory.Create<ChangeEventArgs>(
+                    this,
+                    e => UpdateAnswer(
+                        fieldId,
+                        e.Value?.ToString() ?? string.Empty)));
+            builder.CloseElement();
+        }
+        else if (field.FieldType == 1)
+        {
+            // Number
+            builder.OpenElement(5, "input");
+            builder.AddAttribute(6, "type", "number");
+            builder.AddAttribute(7, "class", "form-control");
+            builder.AddAttribute(8, "value", value);
+            builder.AddAttribute(
+                9,
+                "oninput",
+                EventCallback.Factory.Create<ChangeEventArgs>(
+                    this,
+                    e => UpdateAnswer(
+                        fieldId,
+                        e.Value?.ToString() ?? string.Empty)));
+            builder.CloseElement();
+        }
+        else if (field.FieldType == 2)
+        {
+            // Yes / No
+            builder.OpenElement(10, "select");
+            builder.AddAttribute(11, "class", "form-select");
+            builder.AddAttribute(12, "value", value);
+            builder.AddAttribute(
+                13,
+                "onchange",
+                EventCallback.Factory.Create<ChangeEventArgs>(
+                    this,
+                    e => UpdateAnswer(
+                        fieldId,
+                        e.Value?.ToString() ?? string.Empty)));
+
+            builder.OpenElement(14, "option");
+            builder.AddAttribute(15, "value", "");
+            builder.AddContent(16, "Select...");
+            builder.CloseElement();
+
+            builder.OpenElement(17, "option");
+            builder.AddAttribute(18, "value", "Yes");
+            builder.AddContent(19, "Yes");
+            builder.CloseElement();
+
+            builder.OpenElement(20, "option");
+            builder.AddAttribute(21, "value", "No");
+            builder.AddContent(22, "No");
+            builder.CloseElement();
+
+            builder.CloseElement();
+        }
+        else if (field.FieldType == 3)
+        {
+            // Dropdown
+            builder.OpenElement(23, "select");
+            builder.AddAttribute(24, "class", "form-select");
+            builder.AddAttribute(25, "value", value);
+            builder.AddAttribute(
+                26,
+                "onchange",
+                EventCallback.Factory.Create<ChangeEventArgs>(
+                    this,
+                    e => UpdateAnswer(
+                        fieldId,
+                        e.Value?.ToString() ?? string.Empty)));
+
+            if (field.Options != null)
+            {
+                foreach (var option in field.Options)
+                {
+                    builder.OpenElement(27, "option");
+                    builder.AddAttribute(28, "value", option.Value);
+                    builder.AddContent(29, option.Value);
+                    builder.CloseElement();
+                }
+            }
+
+            builder.CloseElement();
+        }
+        else if (field.FieldType == 4)
+        {
+            // Checkbox
+            var isChecked =
+                value.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+                value.Equals("yes", StringComparison.OrdinalIgnoreCase);
+
+            builder.OpenElement(30, "div");
+            builder.AddAttribute(31, "class", "form-check");
+
+            builder.OpenElement(32, "input");
+            builder.AddAttribute(33, "type", "checkbox");
+            builder.AddAttribute(34, "class", "form-check-input");
+            builder.AddAttribute(35, "checked", isChecked);
+
+            builder.AddAttribute(
+                36,
+                "onchange",
+                EventCallback.Factory.Create<ChangeEventArgs>(
+                    this,
+                    e => UpdateAnswer(
+                        fieldId,
+                        (e.Value is bool checkedValue && checkedValue)
+                            ? "true"
+                            : "false")));
+
+            builder.CloseElement();
+
+            builder.OpenElement(37, "label");
+            builder.AddAttribute(38, "class", "form-check-label");
+            builder.AddContent(39, "Checked");
+            builder.CloseElement();
+
+            builder.CloseElement();
+        }
+        else if (field.FieldType == 5)
+{
+    // Multi-Select
+    var selectedValues = value
+        .Split(',', StringSplitOptions.RemoveEmptyEntries)
+        .Select(v => v.Trim())
+        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    builder.OpenElement(40, "div");
+    builder.AddAttribute(41, "class", "multi-select-options");
+
+    if (field.Options != null)
+    {
+        foreach (var option in field.Options)
+        {
+            var optionValue = option.Value;
+            var isSelected = selectedValues.Contains(optionValue);
+
+            builder.OpenElement(42, "div");
+            builder.AddAttribute(43, "class", "form-check");
+
+            builder.OpenElement(44, "input");
+            builder.AddAttribute(45, "type", "checkbox");
+            builder.AddAttribute(46, "class", "form-check-input");
+            builder.AddAttribute(47, "checked", isSelected);
+
+            builder.AddAttribute(
+                48,
+                "onchange",
+                EventCallback.Factory.Create<ChangeEventArgs>(
+                    this,
+                    e =>
+                    {
+                        var currentlyChecked =
+                            e.Value is bool checkedValue && checkedValue;
+
+                        if (currentlyChecked)
+                        {
+                            selectedValues.Add(optionValue);
+                        }
+                        else
+                        {
+                            selectedValues.Remove(optionValue);
+                        }
+
+                        UpdateAnswer(
+                            fieldId,
+                            string.Join(", ", selectedValues));
+                    }));
+
+            builder.CloseElement();
+
+            builder.OpenElement(49, "label");
+            builder.AddAttribute(50, "class", "form-check-label");
+            builder.AddContent(51, optionValue);
+            builder.CloseElement();
+
+            builder.CloseElement();
+        }
+    }
+
+    builder.CloseElement();
+}
+        else
+        {
+            // Fallback
+            builder.OpenElement(40, "input");
+            builder.AddAttribute(41, "class", "form-control");
+            builder.AddAttribute(42, "value", value);
+            builder.AddAttribute(
+                43,
+                "oninput",
+                EventCallback.Factory.Create<ChangeEventArgs>(
+                    this,
+                    e => UpdateAnswer(
+                        fieldId,
+                        e.Value?.ToString() ?? string.Empty)));
+            builder.CloseElement();
+        }
+    };
+}
 private void UpdateAnswer(
     int fieldId,
     string value)
@@ -555,7 +798,13 @@ private bool IsMatchForm(GameFormModel form)
             ? "btn btn-primary"
             : "btn btn-outline-primary";
     }
-    private string GetEventName(int eventId)
+    
+    private string GetFormName(int formId)
+{
+    var form = gameForms.FirstOrDefault(f => f.Id == formId);
+    return form?.Name ?? $"Form {formId}";
+}
+        private string GetEventName(int eventId)
 {
     var eventItem =
         events.FirstOrDefault(

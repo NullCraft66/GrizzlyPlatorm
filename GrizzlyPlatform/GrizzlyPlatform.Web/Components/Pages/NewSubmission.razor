@@ -1,0 +1,436 @@
+@page "/submissions/new"
+@using System.Net.Http.Json
+@using GrizzlyPlatform.Web.Models
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<PageTitle>New Submission</PageTitle>
+
+<h1>New Scouting Submission</h1>
+
+@if (isLoading)
+{
+    <p>Loading...</p>
+}
+else if (forms.Count == 0)
+{
+    <p>No scouting forms are available.</p>
+}
+else
+{
+    <div class="mb-3">
+        <label class="form-label">Scouting Form</label>
+
+        <select class="form-select"
+                value="@selectedFormId"
+                @onchange="FormChanged">
+
+            <option value="0">Select a form...</option>
+
+            @foreach (var form in forms)
+            {
+                <option value="@form.Id">
+                    @form.Name
+                </option>
+            }
+        </select>
+    </div>
+
+    @if (selectedForm != null)
+    {
+        <div class="card p-3">
+            <h3>@selectedForm.Name</h3>
+
+            @if (!string.IsNullOrWhiteSpace(selectedForm.Description))
+            {
+                <p>@selectedForm.Description</p>
+            }
+
+            <hr />
+
+            <div class="mb-3">
+                <label class="form-label">Team Number</label>
+                <input type="number"
+                       class="form-control"
+                       @bind="teamNumber" />
+            </div>
+
+                       <div class="mb-3">
+                <label class="form-label">Scout Name</label>
+                <input class="form-control"
+                       @bind="scoutName" />
+            </div>
+
+                      @if (selectedForm.FormType == 1)
+            {
+                <hr />
+
+                <h4>Match Information</h4>
+
+                <div class="mb-3">
+                    <label class="form-label">Event ID</label>
+                    <input type="number"
+                           class="form-control"
+                           @bind="eventId" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Match Number</label>
+                    <input type="number"
+                           class="form-control"
+                           @bind="matchNumber" />
+                </div>
+
+               
+                <div class="mb-3">
+                    <label class="form-label">Match Type</label>
+                    <select class="form-select" @bind="matchType">
+                        <option value="">Select match type...</option>
+                        <option value="Practice">Practice</option>
+                        <option value="Qualification">Qualification</option>
+                        <option value="Playoff">Playoff</option>
+                    </select>
+                </div>
+            }
+
+            @foreach (var field in selectedForm.Fields.Where(f => !f.IsSystemField || f.Question == "Team Name").OrderBy(f => f.DisplayOrder))
+{
+    <div class="mb-3">
+        <label class="form-label">
+            @field.Question
+
+            @if (field.Required)
+            {
+                <span class="text-danger">*</span>
+            }
+        </label>
+
+        @if (!string.IsNullOrWhiteSpace(field.Description))
+        {
+            <div class="form-text">
+                @field.Description
+            </div>
+        }
+
+        @RenderField(field)
+    </div>
+}
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <div class="alert alert-danger">
+                    @errorMessage
+                </div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(successMessage))
+            {
+                <div class="alert alert-success">
+                    @successMessage
+                </div>
+            }
+
+          <div class="d-flex gap-3 mt-4">
+    <button class="btn btn-primary"
+            @onclick="SubmitForm"
+            disabled="@isSubmitting">
+        @(isSubmitting ? "Submitting..." : "Submit Scouting Data")
+    </button>
+
+      <button class="btn btn-secondary"
+            @onclick="Cancel">
+        Cancel
+    </button>
+</div>
+</div>
+    }
+}
+
+@code {
+    private List<GameFormModel> forms = new();
+    private bool isLoading = true;
+    private bool isSubmitting = false;
+
+    private int selectedFormId = 0;
+    private GameFormModel? selectedForm;
+
+private int teamNumber;
+private string scoutName = "";
+
+private int? eventId;
+private int? matchNumber;
+private int? setNumber;
+private string matchType = "";
+    private Dictionary<int, string> answers = new();
+
+    private string errorMessage = "";
+    private string successMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        forms = await Http.GetFromJsonAsync<List<GameFormModel>>(
+            "api/GameForms")
+            ?? new List<GameFormModel>();
+
+        isLoading = false;
+    }
+
+    private void FormChanged(ChangeEventArgs e)
+    {
+        selectedFormId = int.TryParse(
+            e.Value?.ToString(),
+            out var id)
+            ? id
+            : 0;
+
+        selectedForm = forms.FirstOrDefault(f => f.Id == selectedFormId);
+
+        answers.Clear();
+        errorMessage = "";
+        successMessage = "";
+    }
+
+    private RenderFragment RenderField(GameFormFieldModel field)
+    {
+        return builder =>
+        {
+            var value = answers.TryGetValue(
+                field.Id,
+                out var answer)
+                ? answer
+                : "";
+
+            if (field.FieldType == 0)
+            {
+                builder.OpenElement(0, "input");
+                builder.AddAttribute(1, "class", "form-control");
+                builder.AddAttribute(2, "value", value);
+                builder.AddAttribute(
+                    3,
+                    "oninput",
+                    EventCallback.Factory.Create<ChangeEventArgs>(
+                        this,
+                        e => UpdateAnswer(
+                            field.Id,
+                            e.Value?.ToString() ?? "")));
+                builder.CloseElement();
+            }
+            else if (field.FieldType == 1)
+            {
+                builder.OpenElement(4, "input");
+                builder.AddAttribute(5, "type", "number");
+                builder.AddAttribute(6, "class", "form-control");
+                builder.AddAttribute(7, "value", value);
+                builder.AddAttribute(
+                    8,
+                    "oninput",
+                    EventCallback.Factory.Create<ChangeEventArgs>(
+                        this,
+                        e => UpdateAnswer(
+                            field.Id,
+                            e.Value?.ToString() ?? "")));
+                builder.CloseElement();
+            }
+            else if (field.FieldType == 2)
+            {
+                builder.OpenElement(9, "select");
+                builder.AddAttribute(10, "class", "form-select");
+                builder.AddAttribute(11, "value", value);
+                builder.AddAttribute(
+                    12,
+                    "onchange",
+                    EventCallback.Factory.Create<ChangeEventArgs>(
+                        this,
+                        e => UpdateAnswer(
+                            field.Id,
+                            e.Value?.ToString() ?? "")));
+
+                builder.OpenElement(13, "option");
+                builder.AddAttribute(14, "value", "");
+                builder.AddContent(15, "Select...");
+                builder.CloseElement();
+
+                builder.OpenElement(16, "option");
+                builder.AddAttribute(17, "value", "Yes");
+                builder.AddContent(18, "Yes");
+                builder.CloseElement();
+
+                builder.OpenElement(19, "option");
+                builder.AddAttribute(20, "value", "No");
+                builder.AddContent(21, "No");
+                builder.CloseElement();
+
+                builder.CloseElement();
+            }
+            else if (field.FieldType == 3)
+            {
+                builder.OpenElement(22, "select");
+                builder.AddAttribute(23, "class", "form-select");
+                builder.AddAttribute(24, "value", value);
+                builder.AddAttribute(
+                    25,
+                    "onchange",
+                    EventCallback.Factory.Create<ChangeEventArgs>(
+                        this,
+                        e => UpdateAnswer(
+                            field.Id,
+                            e.Value?.ToString() ?? "")));
+
+                if (field.Options != null)
+                {
+                    foreach (var option in field.Options)
+                    {
+                        builder.OpenElement(26, "option");
+                        builder.AddAttribute(27, "value", option.Value);
+                        builder.AddContent(28, option.Value);
+                        builder.CloseElement();
+                    }
+                }
+
+                builder.CloseElement();
+            }
+            else if (field.FieldType == 4)
+            {
+                var isChecked =
+                    value.Equals(
+                        "true",
+                        StringComparison.OrdinalIgnoreCase) ||
+                    value.Equals(
+                        "yes",
+                        StringComparison.OrdinalIgnoreCase);
+
+                builder.OpenElement(29, "div");
+                builder.AddAttribute(30, "class", "form-check");
+
+                builder.OpenElement(31, "input");
+                builder.AddAttribute(32, "type", "checkbox");
+                builder.AddAttribute(33, "class", "form-check-input");
+                builder.AddAttribute(34, "checked", isChecked);
+
+                builder.AddAttribute(
+                    35,
+                    "onchange",
+                    EventCallback.Factory.Create<ChangeEventArgs>(
+                        this,
+                        e => UpdateAnswer(
+                            field.Id,
+                            e.Value is bool b && b
+                                ? "true"
+                                : "false")));
+
+                builder.CloseElement();
+
+                builder.OpenElement(36, "label");
+                builder.AddAttribute(
+                    37,
+                    "class",
+                    "form-check-label");
+                builder.AddContent(38, "Checked");
+                builder.CloseElement();
+
+                builder.CloseElement();
+            }
+            else
+            {
+                builder.OpenElement(39, "input");
+                builder.AddAttribute(40, "class", "form-control");
+                builder.AddAttribute(41, "value", value);
+                builder.AddAttribute(
+                    42,
+                    "oninput",
+                    EventCallback.Factory.Create<ChangeEventArgs>(
+                        this,
+                        e => UpdateAnswer(
+                            field.Id,
+                            e.Value?.ToString() ?? "")));
+                builder.CloseElement();
+            }
+        };
+    }
+
+    private void UpdateAnswer(int fieldId, string value)
+    {
+        answers[fieldId] = value;
+    }
+
+    private async Task SubmitForm()
+    {
+        errorMessage = "";
+        successMessage = "";
+
+        if (selectedForm == null)
+        {
+            errorMessage = "Please select a scouting form.";
+            return;
+        }
+
+        if (teamNumber <= 0)
+        {
+            errorMessage = "Please enter a team number.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(scoutName))
+        {
+            errorMessage = "Please enter the scout name.";
+            return;
+        }
+if (selectedForm.FormType == 1)
+{
+    if (!eventId.HasValue || eventId.Value <= 0)
+    {
+        errorMessage = "Please enter an event ID.";
+        return;
+    }
+
+    if (!matchNumber.HasValue || matchNumber.Value <= 0)
+    {
+        errorMessage = "Please enter a match number.";
+        return;
+    }
+}
+
+        isSubmitting = true;
+
+        try
+        {
+var request = new
+{
+    gameFormId = selectedForm.Id,
+    teamNumber,
+    scoutName,
+    eventId,
+    matchNumber,
+    setNumber,
+    matchType,
+    answers = answers.Select(a => new
+    {
+        gameFormFieldId = a.Key,
+        value = a.Value
+    }).ToList()
+};
+           var response = await Http.PostAsJsonAsync(
+    "api/GameFormSubmissions/scout",
+    request);
+
+            if (response.IsSuccessStatusCode)
+            {
+                successMessage = "Submission saved successfully!";
+                answers.Clear();
+            }
+            else
+            {
+                errorMessage =
+                    await response.Content.ReadAsStringAsync();
+            }
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/submissions");
+    }
+}
