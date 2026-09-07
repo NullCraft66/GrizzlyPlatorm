@@ -45,6 +45,12 @@ public class AuthService
         return user;
     }
 
+    public async Task<List<User>> GetUsersAsync()
+    {
+        return await _context.Users
+            .ToListAsync();
+    }
+
     public bool VerifyPassword(
         User user,
         string password)
@@ -58,3 +64,4 @@ public class AuthService
                result == PasswordVerificationResult.SuccessRehashNeeded;
     }
 }
+

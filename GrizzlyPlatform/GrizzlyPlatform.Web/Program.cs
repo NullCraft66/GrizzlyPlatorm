@@ -1,4 +1,5 @@
 using GrizzlyPlatform.Web.Components;
+using GrizzlyPlatform.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,6 +10,9 @@ builder.Services.AddScoped(sp => new HttpClient
         ?? "http://localhost:5263/"
     )
 });
+// Authentication state
+builder.Services.AddScoped<AuthState>();
+
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
@@ -32,3 +36,4 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.Run();
+

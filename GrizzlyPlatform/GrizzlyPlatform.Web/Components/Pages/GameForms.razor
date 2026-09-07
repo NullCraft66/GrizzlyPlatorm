@@ -1,12 +1,15 @@
 @page "/gameforms"
 @inject HttpClient Http
 @inject IJSRuntime JS
+@inject GrizzlyPlatform.Web.Services.AuthState AuthState
 @using System.Net.Http.Json
 @using GrizzlyPlatform.Web.Models
 
 <PageTitle>Game Forms</PageTitle>
 
-<div class="game-forms-page">
+@if (AuthState.IsAdmin)
+{
+    <div class="game-forms-page">
 
     <div class="page-header">
         <div>
@@ -688,8 +691,20 @@
 
         </div>
 
+      </div>
     </div>
 }
+
+@if (!AuthState.IsAdmin)
+{
+    <div class="container mt-5">
+        <div class="alert alert-danger">
+            <h4>Access Denied</h4>
+            <p>You must be an administrator to manage game forms.</p>
+        </div>
+    </div>
+}
+
 @code {
 
     private List<GameFormModel>? gameForms;
@@ -1248,3 +1263,9 @@ private async Task SaveField()
     }
 
 }
+
+
+
+
+
+

@@ -1,0 +1,35 @@
+@inject GrizzlyPlatform.Web.Services.AuthState AuthState
+@inject NavigationManager Navigation
+
+@if (AuthState.IsLoggedIn)
+{
+    @ChildContent
+}
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    protected override void OnInitialized()
+    {
+        AuthState.OnChange += HandleAuthChanged;
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender && !AuthState.IsLoggedIn)
+        {
+            Navigation.NavigateTo("/login");
+        }
+    }
+
+    private void HandleAuthChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        AuthState.OnChange -= HandleAuthChanged;
+    }
+}

@@ -58,3 +58,133 @@ h1:focus {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+.user-role.admin {
+    background-color: #FFE500;
+    color: #111827;
+    font-weight: 700;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    display: inline-block;
+}
+
+.user-role.viewer {
+    background-color: #FFFFFF;
+    color: #111827;
+    font-weight: 600;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    display: inline-block;
+}
+
+.user-role.scout {
+    background-color: #1B6EC2;
+    color: #FFFFFF;
+    font-weight: 600;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    display: inline-block;
+}
+
+
+.display-name.admin {
+    color: #FFE500;
+    font-weight: 700;
+}
+
+.display-name.viewer,
+.display-name.scout {
+    color: #FFFFFF;
+    font-weight: 700;
+}
+
+.user-role-label {
+    color: #FFFFFF;
+    font-weight: 600;
+    margin-right: 0.35rem;
+}
+
+.user-role.admin {
+    background-color: #FFE500;
+    color: #111827;
+    font-weight: 700;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    display: inline-block;
+}
+
+.user-role.viewer {
+    background-color: #FFFFFF;
+    color: #111827;
+    font-weight: 600;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    display: inline-block;
+}
+
+.user-role.scout {
+    background-color: #1B6EC2;
+    color: #FFFFFF;
+    font-weight: 600;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    display: inline-block;
+}
+.account-card {
+    padding: 0.75rem 0.5rem;
+}
+
+.account-name {
+    color: #FFE500;
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-bottom: 0.2rem;
+}
+
+.account-role {
+    color: #FFFFFF;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.account-message {
+    color: #FFFFFF;
+    opacity: 0.7;
+    font-size: 0.8rem;
+    font-style: italic;
+    margin-top: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.user-role {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    margin-left: 0.25rem;
+}
+
+.user-role.admin {
+    background-color: #FFE500;
+    color: #111827;
+}
+
+.user-role.scout {
+    background-color: #1B6EC2;
+    color: #FFFFFF;
+}
+
+.user-role.viewer {
+    background-color: #FFFFFF;
+    color: #111827;
+}
+
+.account-logout {
+    margin-top: 0.1rem;
+}

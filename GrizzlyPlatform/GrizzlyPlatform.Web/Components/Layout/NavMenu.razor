@@ -1,4 +1,7 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@inject GrizzlyPlatform.Web.Services.AuthState AuthState
+@inject NavigationManager Navigation
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">GrizzlyPlatform.Web</a>
     </div>
@@ -10,6 +13,59 @@
      onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="flex-column">
 
+  @if (AuthState.IsLoggedIn)
+{
+    <div class="nav-item px-3">
+        <div class="account-card">
+            <div class="account-name">
+                Team 66
+            </div>
+
+            <div class="account-role">
+                role:
+                <span class="user-role @AuthState.Role.ToLowerInvariant()">
+                    @AuthState.Role
+                </span>
+            </div>
+
+            <div class="account-message">
+                enjoy your stay
+            </div>
+
+            <button class="btn btn-outline-light w-100 account-logout"
+                    @onclick="Logout">
+                Logout
+            </button>
+        </div>
+    </div>
+}
+else
+{
+    <div class="nav-item px-3">
+        <NavLink class="nav-link" href="login">
+            <span class="bi bi-box-arrow-in-right"
+                  aria-hidden="true"></span> Login
+        </NavLink>
+    </div>
+}
+
+            <div class="nav-item px-3">
+                <button class="btn btn-outline-light w-100"
+                        @onclick="Logout">
+                    Logout
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="login">
+                    <span class="bi bi-box-arrow-in-right"
+                          aria-hidden="true"></span> Login
+                </NavLink>
+            </div>
+        }
+
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
                 <span class="bi bi-house-door-fill"
@@ -17,12 +73,12 @@
             </NavLink>
         </div>
 
-<div class="nav-item px-3">
-    <NavLink class="nav-link" href="seasons">
-        <span class="bi bi-calendar-range"
-              aria-hidden="true"></span> Seasons
-    </NavLink>
-</div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="seasons">
+                <span class="bi bi-calendar-range"
+                      aria-hidden="true"></span> Seasons
+            </NavLink>
+        </div>
 
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="events">
@@ -45,8 +101,6 @@
             </NavLink>
         </div>
 
-
-
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="scouting">
                 <span class="bi bi-clipboard-check"
@@ -54,12 +108,31 @@
             </NavLink>
         </div>
 
-<div class="nav-item px-3">
-    <NavLink class="nav-link" href="submissions">
-        <span class="bi bi-database"
-              aria-hidden="true"></span> Submissions
-    </NavLink>
-</div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="submissions">
+                <span class="bi bi-database"
+                      aria-hidden="true"></span> Submissions
+            </NavLink>
+        </div>
 
     </nav>
 </div>
+
+@code {
+    protected override void OnInitialized()
+    {
+        AuthState.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        AuthState.OnChange -= StateHasChanged;
+    }
+
+    private void Logout()
+    {
+        AuthState.Logout();
+        Navigation.NavigateTo("/login");
+    }
+}
+

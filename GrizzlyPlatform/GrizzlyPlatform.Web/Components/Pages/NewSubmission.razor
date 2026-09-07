@@ -273,6 +273,48 @@ private async Task TeamNumberChanged()
     }
 }
 
+private async Task LoadTeamMatches()
+{
+    matches.Clear();
+    selectedMatchId = 0;
+    matchNumber = null;
+    matchType = "";
+    setNumber = null;
+
+    if (selectedEventId <= 0 || teamNumber <= 0)
+    {
+        return;
+    }
+
+    var teamResponse = await Http.GetAsync(
+        $"api/Teams/number/{teamNumber}");
+
+    if (!teamResponse.IsSuccessStatusCode)
+    {
+        errorMessage = $"Team {teamNumber} was not found.";
+        return;
+    }
+
+    var team = await teamResponse.Content
+        .ReadFromJsonAsync<TeamModel>();
+
+    if (team == null)
+    {
+        errorMessage = $"Team {teamNumber} was not found.";
+        return;
+    }
+
+    errorMessage = "";
+
+    var teamMatches =
+        await Http.GetFromJsonAsync<List<MatchModel>>(
+            $"api/Matches/team/{team.Id}")
+        ?? new List<MatchModel>();
+
+    matches = teamMatches
+        .Where(m => m.EventId == selectedEventId)
+        .ToList();
+}
 private async Task EventChanged(ChangeEventArgs e)
 {
     selectedEventId = int.TryParse(

@@ -43,6 +43,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xIb21lLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/YCSRobotics/GrizzlyPlatorm/GrizzlyPlatform/GrizzlyPlatform.Web/Components/Pages/Login.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xMb2dpbi5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/YCSRobotics/GrizzlyPlatorm/GrizzlyPlatform/GrizzlyPlatform.Web/Components/Pages/NewSubmission.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xOZXdTdWJtaXNzaW9uLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
@@ -65,6 +69,14 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/YCSRobotics/GrizzlyPlatorm/GrizzlyPlatform/GrizzlyPlatform.Web/Components/Pages/Weather.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xXZWF0aGVyLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/YCSRobotics/GrizzlyPlatorm/GrizzlyPlatform/GrizzlyPlatform.Web/Components/RedirectToLogin.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xSZWRpcmVjdFRvTG9naW4ucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/YCSRobotics/GrizzlyPlatorm/GrizzlyPlatform/GrizzlyPlatform.Web/Components/RequireLogin.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xSZXF1aXJlTG9naW4ucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/YCSRobotics/GrizzlyPlatorm/GrizzlyPlatform/GrizzlyPlatform.Web/Components/Routes.razor]

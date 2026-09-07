@@ -1,0 +1,129 @@
+@page "/login"
+
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject GrizzlyPlatform.Web.Services.AuthState AuthState
+
+<PageTitle>Login - GrizzlyPlatform</PageTitle>
+
+<div class="container mt-5" style="max-width: 450px;">
+    <div class="card shadow-sm">
+        <div class="card-body p-4">
+
+            <h2 class="text-center mb-4">GrizzlyPlatform Login</h2>
+
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <div class="alert alert-danger">
+                    @errorMessage
+                </div>
+            }
+
+            <div class="mb-3">
+                <label class="form-label">Username</label>
+                <input class="form-control"
+                       @bind="username"
+                       autocomplete="username" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Password</label>
+                <input type="password"
+                       class="form-control"
+                       @bind="password"
+                       autocomplete="current-password" />
+            </div>
+
+            <button class="btn btn-primary w-100"
+                    @onclick="PerformLogin"
+                    disabled="@isLoggingIn">
+                @(isLoggingIn ? "Logging in..." : "Login")
+            </button>
+
+        </div>
+    </div>
+</div>
+
+@code {
+    private string username = "";
+    private string password = "";
+    private string errorMessage = "";
+    private bool isLoggingIn;
+
+    private class LoginResponse
+    {
+        public int Id { get; set; }
+        public string Username { get; set; } = "";
+        public string DisplayName { get; set; } = "";
+        public string Role { get; set; } = "";
+    }
+
+    private async Task PerformLogin()
+    {
+        errorMessage = "";
+
+        if (string.IsNullOrWhiteSpace(username) ||
+            string.IsNullOrWhiteSpace(password))
+        {
+            errorMessage = "Please enter your username and password.";
+            return;
+        }
+
+        isLoggingIn = true;
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync(
+                "http://localhost:5263/api/Auth/login",
+                new
+                {
+                    username,
+                    password
+                });
+
+            if (response.IsSuccessStatusCode)
+{
+    var result =
+        await response.Content.ReadFromJsonAsync<LoginResponse>();
+
+    if (result == null)
+    {
+        errorMessage = "Login response was invalid.";
+        return;
+    }
+
+    AuthState.Login(
+        result.Id,
+        result.Username,
+        result.DisplayName,
+        result.Role);
+
+    Navigation.NavigateTo("/");
+    return;
+}
+
+            if (response.StatusCode ==
+                System.Net.HttpStatusCode.Unauthorized)
+            {
+                errorMessage = "Invalid username or password.";
+            }
+            else
+            {
+                errorMessage =
+                    "Unable to log in. Please try again.";
+            }
+        }
+        catch
+        {
+            errorMessage =
+                "Unable to connect to the GrizzlyPlatform API.";
+        }
+        finally
+        {
+            isLoggingIn = false;
+        }
+    }
+}
+
+

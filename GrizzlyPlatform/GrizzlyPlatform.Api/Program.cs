@@ -1,4 +1,5 @@
 using GrizzlyPlatform.Api.Data;
+using GrizzlyPlatform.Api.Models;
 using GrizzlyPlatform.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,6 +8,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Register Entity Framework Core with SQLite.
 builder.Services.AddDbContext<GrizzlyDbContext>(options =>
     options.UseSqlite("Data Source=grizzlyplatform.db"));
+builder.Services.AddScoped<AuthService>();
 
 builder.Services.AddHttpClient<TheBlueAllianceService>(client =>
 {
@@ -35,6 +37,39 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
+// Create the initial admin account if one does not exist.
+using (var scope = app.Services.CreateScope())
+{
+    var authService = scope.ServiceProvider
+        .GetRequiredService<AuthService>();
+
+    var configuration = scope.ServiceProvider
+        .GetRequiredService<IConfiguration>();
+
+    var adminUsername =
+        configuration["AdminUsername"];
+
+    var adminPassword =
+        configuration["AdminPassword"];
+
+    if (!string.IsNullOrWhiteSpace(adminUsername) &&
+        !string.IsNullOrWhiteSpace(adminPassword))
+    {
+        var existingAdmin =
+            await authService.FindByUsernameAsync(
+                adminUsername);
+
+        if (existingAdmin == null)
+        {
+            await authService.CreateUserAsync(
+                adminUsername,
+                "Administrator",
+                adminPassword,
+                "Admin");
+        }
+    }
+}
+
 app.MapGet("/", () => "GRIZZLY PLATFORM CURRENT BUILD");
 
 app.MapGet("/api/test", () => new
@@ -48,3 +83,6 @@ app.UseCors("ScoutingClients");
 app.MapControllers();
 
 app.Run();
+
+
+
