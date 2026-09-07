@@ -49,15 +49,18 @@ else
             <hr />
 
             <div class="mb-3">
-                <label class="form-label">Team Number</label>
+               <label class="form-label">
+    Team Number <span class="text-danger">*</span>
+</label>
                 <input type="number"
                        class="form-control"
                        @bind="teamNumber" />
             </div>
 
                        <div class="mb-3">
-                <label class="form-label">Scout Name</label>
-                <input class="form-control"
+<label class="form-label">
+    Scout Name <span class="text-danger">*</span>
+</label>                <input class="form-control"
                        @bind="scoutName" />
             </div>
 
@@ -67,30 +70,60 @@ else
 
                 <h4>Match Information</h4>
 
-                <div class="mb-3">
-                    <label class="form-label">Event ID</label>
-                    <input type="number"
-                           class="form-control"
-                           @bind="eventId" />
-                </div>
+<div class="mb-3">
+    <label class="form-label">Event</label>
 
-                <div class="mb-3">
-                    <label class="form-label">Match Number</label>
-                    <input type="number"
-                           class="form-control"
-                           @bind="matchNumber" />
-                </div>
+    <select class="form-select"
+            value="@selectedEventId"
+            @onchange="EventChanged">
+
+        <option value="0">Select an event...</option>
+
+        @foreach (var eventItem in events)
+        {
+            <option value="@eventItem.Id">
+                @eventItem.Name
+            </option>
+        }
+    </select>
+</div>
+
+               <div class="mb-3">
+    <label class="form-label">Match</label>
+
+    <select class="form-select"
+            value="@selectedMatchId"
+            @onchange="MatchChanged"
+            disabled="@(selectedEventId == 0 || matches.Count == 0)">
+
+        <option value="0">
+            @(selectedEventId == 0
+                ? "Select an event first..."
+                : matches.Count == 0
+                    ? "No matches available"
+                    : "Select a match...")
+        </option>
+
+        @foreach (var match in matches)
+        {
+           <option value="@match.Id">
+    @if (match.MatchType == "Semifinal")
+    {
+        @($"Semifinal {match.SetNumber}")
+    }
+    else
+    {
+       <option value="@match.Id">
+    @($"{match.MatchType} {match.MatchNumber}")
+</option>
+    }
+</option>
+        }
+    </select>
+</div>
 
                
-                <div class="mb-3">
-                    <label class="form-label">Match Type</label>
-                    <select class="form-select" @bind="matchType">
-                        <option value="">Select match type...</option>
-                        <option value="Practice">Practice</option>
-                        <option value="Qualification">Qualification</option>
-                        <option value="Playoff">Playoff</option>
-                    </select>
-                </div>
+               
             }
 
             @foreach (var field in selectedForm.Fields.Where(f => !f.IsSystemField || f.Question == "Team Name").OrderBy(f => f.DisplayOrder))
@@ -147,6 +180,11 @@ else
 
 @code {
     private List<GameFormModel> forms = new();
+private List<EventModel> events = new();
+private List<MatchModel> matches = new();
+
+private int selectedEventId = 0;
+private int selectedMatchId = 0;
     private bool isLoading = true;
     private bool isSubmitting = false;
 
@@ -165,30 +203,125 @@ private string matchType = "";
     private string errorMessage = "";
     private string successMessage = "";
 
-    protected override async Task OnInitializedAsync()
-    {
-        forms = await Http.GetFromJsonAsync<List<GameFormModel>>(
-            "api/GameForms")
-            ?? new List<GameFormModel>();
+ protected override async Task OnInitializedAsync()
+{
+    forms = await Http.GetFromJsonAsync<List<GameFormModel>>(
+        "api/GameForms")
+        ?? new List<GameFormModel>();
 
-        isLoading = false;
+    events = await Http.GetFromJsonAsync<List<EventModel>>(
+        "api/Events")
+        ?? new List<EventModel>();
+
+    isLoading = false;
+}
+
+
+  private void FormChanged(ChangeEventArgs e)
+{
+    selectedFormId = int.TryParse(
+        e.Value?.ToString(),
+        out var id)
+        ? id
+        : 0;
+
+    selectedForm = forms.FirstOrDefault(f => f.Id == selectedFormId);
+
+    // Clear previous scouting answers
+    answers.Clear();
+
+    // Clear previous match information
+    eventId = null;
+    matchNumber = null;
+    setNumber = null;
+    matchType = "";
+
+    errorMessage = "";
+    successMessage = "";
+}
+
+private async Task TeamNumberChanged()
+{
+    if (teamNumber <= 0)
+    {
+        return;
     }
 
-    private void FormChanged(ChangeEventArgs e)
+    var response = await Http.GetAsync(
+        $"api/Teams/number/{teamNumber}");
+
+    if (!response.IsSuccessStatusCode)
     {
-        selectedFormId = int.TryParse(
-            e.Value?.ToString(),
-            out var id)
-            ? id
-            : 0;
-
-        selectedForm = forms.FirstOrDefault(f => f.Id == selectedFormId);
-
-        answers.Clear();
-        errorMessage = "";
-        successMessage = "";
+        errorMessage = $"Team {teamNumber} was not found.";
+        return;
     }
 
+    var team = await response.Content.ReadFromJsonAsync<TeamModel>();
+
+    if (team == null)
+    {
+        errorMessage = $"Team {teamNumber} was not found.";
+        return;
+    }
+
+    errorMessage = "";
+
+    // If an event is already selected, reload its matches.
+    if (selectedEventId > 0)
+    {
+        await LoadTeamMatches();
+    }
+}
+
+private async Task EventChanged(ChangeEventArgs e)
+{
+    selectedEventId = int.TryParse(
+        e.Value?.ToString(),
+        out var id)
+        ? id
+        : 0;
+
+    selectedMatchId = 0;
+    matches.Clear();
+
+    eventId = selectedEventId > 0
+        ? selectedEventId
+        : null;
+
+    matchNumber = null;
+    matchType = "";
+
+    if (selectedEventId > 0)
+    {
+        matches = await Http.GetFromJsonAsync<List<MatchModel>>(
+            $"api/Matches/event/{selectedEventId}")
+            ?? new List<MatchModel>();
+    }
+}
+
+private void MatchChanged(ChangeEventArgs e)
+{
+    selectedMatchId = int.TryParse(
+        e.Value?.ToString(),
+        out var id)
+        ? id
+        : 0;
+
+    var selectedMatch = matches.FirstOrDefault(
+        m => m.Id == selectedMatchId);
+
+    if (selectedMatch == null)
+    {
+        matchNumber = null;
+        matchType = "";
+        setNumber = null;
+        return;
+    }
+
+    matchNumber = selectedMatch.MatchNumber;
+    matchType = selectedMatch.MatchType;
+    setNumber = selectedMatch.SetNumber;
+}
     private RenderFragment RenderField(GameFormFieldModel field)
     {
         return builder =>
@@ -288,48 +421,100 @@ private string matchType = "";
 
                 builder.CloseElement();
             }
-            else if (field.FieldType == 4)
-            {
-                var isChecked =
-                    value.Equals(
-                        "true",
-                        StringComparison.OrdinalIgnoreCase) ||
-                    value.Equals(
-                        "yes",
-                        StringComparison.OrdinalIgnoreCase);
+           else if (field.FieldType == 4)
+{
+    var isChecked =
+        value.Equals(
+            "true",
+            StringComparison.OrdinalIgnoreCase) ||
+        value.Equals(
+            "yes",
+            StringComparison.OrdinalIgnoreCase);
 
-                builder.OpenElement(29, "div");
-                builder.AddAttribute(30, "class", "form-check");
+    builder.OpenElement(29, "div");
+    builder.AddAttribute(30, "class", "form-check");
 
-                builder.OpenElement(31, "input");
-                builder.AddAttribute(32, "type", "checkbox");
-                builder.AddAttribute(33, "class", "form-check-input");
-                builder.AddAttribute(34, "checked", isChecked);
+    builder.OpenElement(31, "input");
+    builder.AddAttribute(32, "type", "checkbox");
+    builder.AddAttribute(33, "class", "form-check-input");
+    builder.AddAttribute(34, "checked", isChecked);
 
-                builder.AddAttribute(
-                    35,
-                    "onchange",
-                    EventCallback.Factory.Create<ChangeEventArgs>(
-                        this,
-                        e => UpdateAnswer(
-                            field.Id,
-                            e.Value is bool b && b
-                                ? "true"
-                                : "false")));
+    builder.AddAttribute(
+        35,
+        "onchange",
+        EventCallback.Factory.Create<ChangeEventArgs>(
+            this,
+            e => UpdateAnswer(
+                field.Id,
+                e.Value is bool b && b
+                    ? "true"
+                    : "false")));
 
-                builder.CloseElement();
+    builder.CloseElement();
 
-                builder.OpenElement(36, "label");
-                builder.AddAttribute(
-                    37,
-                    "class",
-                    "form-check-label");
-                builder.AddContent(38, "Checked");
-                builder.CloseElement();
+    builder.OpenElement(36, "label");
+    builder.AddAttribute(
+        37,
+        "class",
+        "form-check-label");
+    builder.AddContent(38, "Checked");
+    builder.CloseElement();
 
-                builder.CloseElement();
-            }
-            else
+    builder.CloseElement();
+}
+else if (field.FieldType == 5)
+{
+    var selectedValues = value
+        .Split(
+            '|',
+            StringSplitOptions.RemoveEmptyEntries)
+        .ToHashSet();
+
+    builder.OpenElement(39, "div");
+    builder.AddAttribute(40, "class", "border rounded p-3");
+
+    if (field.Options != null)
+    {
+        foreach (var option in field.Options)
+        {
+            var isSelected =
+                selectedValues.Contains(option.Value);
+
+            builder.OpenElement(41, "div");
+            builder.AddAttribute(42, "class", "form-check");
+
+            builder.OpenElement(43, "input");
+            builder.AddAttribute(44, "type", "checkbox");
+            builder.AddAttribute(45, "class", "form-check-input");
+            builder.AddAttribute(46, "checked", isSelected);
+
+            builder.AddAttribute(
+                47,
+                "onchange",
+                EventCallback.Factory.Create<ChangeEventArgs>(
+                    this,
+                    e => UpdateMultiSelectAnswer(
+                        field.Id,
+                        option.Value,
+                        e.Value is bool b && b)));
+
+            builder.CloseElement();
+
+            builder.OpenElement(48, "label");
+            builder.AddAttribute(
+                49,
+                "class",
+                "form-check-label");
+            builder.AddContent(50, option.Value);
+            builder.CloseElement();
+
+            builder.CloseElement();
+        }
+    }
+
+    builder.CloseElement();
+}
+else
             {
                 builder.OpenElement(39, "input");
                 builder.AddAttribute(40, "class", "form-control");
@@ -351,6 +536,33 @@ private string matchType = "";
     {
         answers[fieldId] = value;
     }
+
+private void UpdateMultiSelectAnswer(
+    int fieldId,
+    string option,
+    bool selected)
+{
+    var values = answers.TryGetValue(
+        fieldId,
+        out var current)
+        ? current
+            .Split(
+                '|',
+                StringSplitOptions.RemoveEmptyEntries)
+            .ToHashSet()
+        : new HashSet<string>();
+
+    if (selected)
+    {
+        values.Add(option);
+    }
+    else
+    {
+        values.Remove(option);
+    }
+
+    answers[fieldId] = string.Join("|", values);
+}
 
     private async Task SubmitForm()
     {
@@ -389,7 +601,24 @@ if (selectedForm.FormType == 1)
     }
 }
 
-        isSubmitting = true;
+foreach (var field in selectedForm.Fields.Where(f => f.Required))
+{
+    // Team Number and Scout Name are handled by the
+    // dedicated inputs above, not the answers dictionary.
+    if (field.Question == "Team Number" ||
+        field.Question == "Scout Name")
+    {
+        continue;
+    }
+
+    if (!answers.TryGetValue(field.Id, out var value) ||
+        string.IsNullOrWhiteSpace(value))
+    {
+        errorMessage =
+            $"Please answer the required question: {field.Question}";
+        return;
+    }
+}        isSubmitting = true;
 
         try
         {
@@ -433,4 +662,26 @@ var request = new
     {
         Navigation.NavigateTo("/submissions");
     }
+private class EventModel
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = "";
+    public string Location { get; set; } = "";
+}
+
+private class MatchModel
+{
+    public int Id { get; set; }
+    public int EventId { get; set; }
+    public string MatchType { get; set; } = "";
+    public int MatchNumber { get; set; }
+    public int SetNumber { get; set; }
+}
+private class TeamModel
+{
+    public int Id { get; set; }
+    public int TeamNumber { get; set; }
+    public string Name { get; set; } = "";
+    public string Location { get; set; } = "";
+}
 }

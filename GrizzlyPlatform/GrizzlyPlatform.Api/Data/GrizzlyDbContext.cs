@@ -11,6 +11,7 @@ public class GrizzlyDbContext : DbContext
     }
 
     public DbSet<Team> Teams { get; set; }
+    public DbSet<User> Users { get; set; }
     public DbSet<Season> Seasons { get; set; }
     public DbSet<GameForm> GameForms { get; set; }
     public DbSet<GameFormField> GameFormFields { get; set; }
@@ -105,3 +106,5 @@ public class GrizzlyDbContext : DbContext
             .OnDelete(DeleteBehavior.SetNull);
     }
 }
+
+

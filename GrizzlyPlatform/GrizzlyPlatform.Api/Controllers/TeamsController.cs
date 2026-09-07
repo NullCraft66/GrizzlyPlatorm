@@ -37,6 +37,20 @@ public class TeamsController : ControllerBase
         return Ok(team);
     }
 
+[HttpGet("number/{teamNumber}")]
+public async Task<IActionResult> GetTeamByNumber(int teamNumber)
+{
+    var team = await _context.Teams
+        .FirstOrDefaultAsync(t => t.TeamNumber == teamNumber);
+
+    if (team == null)
+    {
+        return NotFound();
+    }
+
+    return Ok(team);
+}
+
     [HttpPost]
     public async Task<IActionResult> CreateTeam(Team team)
     {
