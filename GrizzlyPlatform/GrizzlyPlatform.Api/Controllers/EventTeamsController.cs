@@ -27,20 +27,20 @@ public class EventTeamsController : ControllerBase
                 teamId = et.TeamId,
 
                 eventInfo = new
-{
-    id = et.Event.Id,
-    name = et.Event.Name,
-    location = et.Event.Location,
+                {
+                    id = et.Event.Id,
+                    name = et.Event.Name,
+                    location = et.Event.Location,
 
-    season = et.Event.Season == null
-        ? null
-        : new
-        {
-            id = et.Event.Season.Id,
-            year = et.Event.Season.Year,
-            name = et.Event.Season.Name
-        }
-},
+                    season = et.Event.Season == null
+                        ? null
+                        : new
+                        {
+                            id = et.Event.Season.Id,
+                            year = et.Event.Season.Year,
+                            name = et.Event.Season.Name
+                        }
+                },
                 team = new
                 {
                     id = et.Team.Id,

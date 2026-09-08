@@ -14,27 +14,30 @@ public class AllianceSelectionController : ControllerBase
     public AllianceSelectionController(GrizzlyDbContext context)
     {
         _context = context;
-
     }
+
+    // DELETE: api/AllianceSelection/1
     [HttpDelete("{id}")]
-public async Task<IActionResult> DeleteSelection(int id)
-{
-    var selection = await _context.AllianceSelections
-        .FirstOrDefaultAsync(s => s.Id == id);
-
-    if (selection == null)
-        return NotFound("The specified Alliance Selection does not exist.");
-
-    _context.AllianceSelections.Remove(selection);
-
-    await _context.SaveChangesAsync();
-
-    return Ok(new
+    public async Task<IActionResult> DeleteSelection(int id)
     {
-        success = true,
-        message = "Alliance Selection reset."
-    });
-}
+        var selection = await _context.AllianceSelections
+            .FirstOrDefaultAsync(s => s.Id == id);
+
+        if (selection == null)
+        {
+            return NotFound("The specified Alliance Selection does not exist.");
+        }
+
+        _context.AllianceSelections.Remove(selection);
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            success = true,
+            message = "Alliance Selection reset."
+        });
+    }
 
     // GET: api/AllianceSelection/event/1
     [HttpGet("event/{eventId}")]
@@ -70,63 +73,63 @@ public async Task<IActionResult> DeleteSelection(int id)
         }
 
         return Ok(new
-{
-    exists = true,
+        {
+            exists = true,
 
-    selection = new
-    {
-        id = selection.Id,
-        eventId = selection.EventId,
-        status = selection.Status,
-        currentRound = selection.CurrentRound,
-        currentAlliance = selection.CurrentAlliance,
-        startedAt = selection.StartedAt,
-        completedAt = selection.CompletedAt,
-
-        alliances = selection.Alliances
-            .OrderBy(a => a.AllianceNumber)
-            .Select(a => new
+            selection = new
             {
-                id = a.Id,
-                allianceNumber = a.AllianceNumber,
+                id = selection.Id,
+                eventId = selection.EventId,
+                status = selection.Status,
+                currentRound = selection.CurrentRound,
+                currentAlliance = selection.CurrentAlliance,
+                startedAt = selection.StartedAt,
+                completedAt = selection.CompletedAt,
 
-                captainTeamId = a.CaptainTeamId,
-                captainTeamNumber = a.CaptainTeam?.TeamNumber,
-                captainTeamName = a.CaptainTeam?.Name,
-
-                members = a.Members
-                    .OrderBy(m => m.SelectionOrder)
-                    .Select(m => new
+                alliances = selection.Alliances
+                    .OrderBy(a => a.AllianceNumber)
+                    .Select(a => new
                     {
-                        teamId = m.TeamId,
-                        teamNumber = m.Team?.TeamNumber,
-                        teamName = m.Team?.Name,
-                        selectionRound = m.SelectionRound,
-                        selectionOrder = m.SelectionOrder
+                        id = a.Id,
+                        allianceNumber = a.AllianceNumber,
+
+                        captainTeamId = a.CaptainTeamId,
+                        captainTeamNumber = a.CaptainTeam?.TeamNumber,
+                        captainTeamName = a.CaptainTeam?.Name,
+
+                        members = a.Members
+                            .OrderBy(m => m.SelectionOrder)
+                            .Select(m => new
+                            {
+                                teamId = m.TeamId,
+                                teamNumber = m.Team?.TeamNumber,
+                                teamName = m.Team?.Name,
+                                selectionRound = m.SelectionRound,
+                                selectionOrder = m.SelectionOrder
+                            })
+                    }),
+
+                picks = selection.Picks
+                    .OrderBy(p => p.Round)
+                    .ThenBy(p => p.PickOrder)
+                    .Select(p => new
+                    {
+                        id = p.Id,
+                        allianceNumber = p.AllianceNumber,
+                        round = p.Round,
+                        pickOrder = p.PickOrder,
+
+                        invitingTeamId = p.InvitingTeamId,
+                        invitingTeamNumber = p.InvitingTeam?.TeamNumber,
+
+                        invitedTeamId = p.InvitedTeamId,
+                        invitedTeamNumber = p.InvitedTeam?.TeamNumber,
+
+                        result = p.Result,
+                        timestamp = p.Timestamp
                     })
-            }),
-
-        picks = selection.Picks
-            .OrderBy(p => p.Round)
-            .ThenBy(p => p.PickOrder)
-            .Select(p => new
-            {
-                id = p.Id,
-                allianceNumber = p.AllianceNumber,
-                round = p.Round,
-                pickOrder = p.PickOrder,
-
-                invitingTeamId = p.InvitingTeamId,
-                invitingTeamNumber = p.InvitingTeam?.TeamNumber,
-
-                invitedTeamId = p.InvitedTeamId,
-                invitedTeamNumber = p.InvitedTeam?.TeamNumber,
-
-                result = p.Result,
-                timestamp = p.Timestamp
-            })
-    }
-});
+            }
+        });
     }
 
     // POST: api/AllianceSelection/start
@@ -152,8 +155,7 @@ public async Task<IActionResult> DeleteSelection(int id)
                 "Alliance Selection has already been created for this event.");
         }
 
-        if (request.TeamIds == null ||
-            request.TeamIds.Count != 8)
+        if (request.TeamIds == null || request.TeamIds.Count != 8)
         {
             return BadRequest(
                 "Exactly 8 alliance captain teams are required.");
@@ -209,142 +211,159 @@ public async Task<IActionResult> DeleteSelection(int id)
 
     // POST: api/AllianceSelection/pick
     [HttpPost("pick")]
-public async Task<IActionResult> PickTeam(PickAllianceTeamRequest request)
-{
-    var selection = await _context.AllianceSelections
-        .Include(s => s.Alliances)
-            .ThenInclude(a => a.Members)
-        .Include(s => s.Picks)
-        .FirstOrDefaultAsync(s => s.Id == request.AllianceSelectionId);
-
-    if (selection == null)
-        return NotFound("The specified Alliance Selection does not exist.");
-
-    if (selection.Status != "InProgress")
-        return BadRequest("Alliance Selection is not currently in progress.");
-
-    if (selection.CurrentRound < 1 || selection.CurrentRound > 2)
-        return BadRequest("The Alliance Selection is in an invalid round.");
-
-    if (selection.CurrentAlliance < 1 || selection.CurrentAlliance > 8)
-        return BadRequest("The Alliance Selection is at an invalid alliance.");
-
-    // The client cannot choose whose turn it is.
-    // The API determines the current alliance.
-    if (request.AllianceNumber != selection.CurrentAlliance)
+    public async Task<IActionResult> PickTeam(PickAllianceTeamRequest request)
     {
-        return BadRequest(
-            $"It is currently Alliance {selection.CurrentAlliance}'s turn.");
-    }
+        var selection = await _context.AllianceSelections
+            .Include(s => s.Alliances)
+                .ThenInclude(a => a.Members)
+            .Include(s => s.Picks)
+            .FirstOrDefaultAsync(s => s.Id == request.AllianceSelectionId);
 
-    var alliance = selection.Alliances
-        .FirstOrDefault(a => a.AllianceNumber == selection.CurrentAlliance);
-
-    if (alliance == null)
-        return BadRequest("The current alliance does not exist.");
-
-    var team = await _context.Teams
-        .FirstOrDefaultAsync(t => t.Id == request.TeamId);
-
-    if (team == null)
-        return BadRequest("The specified team does not exist.");
-
-    if (alliance.CaptainTeamId == team.Id)
-        return BadRequest("An alliance captain cannot select itself.");
-
-    var alreadySelected = selection.Alliances
-        .SelectMany(a => a.Members)
-        .Any(m => m.TeamId == team.Id);
-
-    if (alreadySelected)
-        return Conflict("This team has already been selected.");
-
-    var isCaptain = selection.Alliances
-        .Any(a => a.CaptainTeamId == team.Id);
-
-    if (isCaptain)
-        return Conflict("Alliance captain teams cannot be selected.");
-
-    var existingMemberCount = alliance.Members.Count;
-
-    if (existingMemberCount >= 2)
-        return BadRequest(
-            "This alliance already has two selected members.");
-
-    var selectionOrder = existingMemberCount + 1;
-
-    var member = new AllianceMember
-    {
-        AllianceId = alliance.Id,
-        TeamId = team.Id,
-        SelectionRound = selection.CurrentRound,
-        SelectionOrder = selectionOrder
-    };
-
-    _context.AllianceMembers.Add(member);
-
-    var pick = new AlliancePick
-    {
-        AllianceSelectionId = selection.Id,
-        AllianceNumber = selection.CurrentAlliance,
-        Round = selection.CurrentRound,
-        PickOrder = selection.Picks.Count + 1,
-        InvitingTeamId = alliance.CaptainTeamId,
-        InvitedTeamId = team.Id,
-        Result = "Accepted",
-        Timestamp = DateTime.UtcNow
-    };
-
-    _context.AlliancePicks.Add(pick);
-
-    // Advance the state machine after the pick.
-    //
-    // Round 1: 1 -> 8
-    // Round 2: 8 -> 1
-
-    if (selection.CurrentRound == 1)
-    {
-        if (selection.CurrentAlliance < 8)
+        if (selection == null)
         {
-            selection.CurrentAlliance++;
+            return NotFound("The specified Alliance Selection does not exist.");
+        }
+
+        if (selection.Status != "InProgress")
+        {
+            return BadRequest("Alliance Selection is not currently in progress.");
+        }
+
+        if (selection.CurrentRound < 1 || selection.CurrentRound > 2)
+        {
+            return BadRequest("The Alliance Selection is in an invalid round.");
+        }
+
+        if (selection.CurrentAlliance < 1 || selection.CurrentAlliance > 8)
+        {
+            return BadRequest("The Alliance Selection is at an invalid alliance.");
+        }
+
+        // The client cannot choose whose turn it is.
+        // The API determines the current alliance.
+        if (request.AllianceNumber != selection.CurrentAlliance)
+        {
+            return BadRequest(
+                $"It is currently Alliance {selection.CurrentAlliance}'s turn.");
+        }
+
+        var alliance = selection.Alliances
+            .FirstOrDefault(a => a.AllianceNumber == selection.CurrentAlliance);
+
+        if (alliance == null)
+        {
+            return BadRequest("The current alliance does not exist.");
+        }
+
+        var team = await _context.Teams
+            .FirstOrDefaultAsync(t => t.Id == request.TeamId);
+
+        if (team == null)
+        {
+            return BadRequest("The specified team does not exist.");
+        }
+
+        if (alliance.CaptainTeamId == team.Id)
+        {
+            return BadRequest("An alliance captain cannot select itself.");
+        }
+
+        var alreadySelected = selection.Alliances
+            .SelectMany(a => a.Members)
+            .Any(m => m.TeamId == team.Id);
+
+        if (alreadySelected)
+        {
+            return Conflict("This team has already been selected.");
+        }
+
+        var isCaptain = selection.Alliances
+            .Any(a => a.CaptainTeamId == team.Id);
+
+        if (isCaptain)
+        {
+            return Conflict("Alliance captain teams cannot be selected.");
+        }
+
+        var existingMemberCount = alliance.Members.Count;
+
+        if (existingMemberCount >= 2)
+        {
+            return BadRequest("This alliance already has two selected members.");
+        }
+
+        var selectionOrder = existingMemberCount + 1;
+
+        var member = new AllianceMember
+        {
+            AllianceId = alliance.Id,
+            TeamId = team.Id,
+            SelectionRound = selection.CurrentRound,
+            SelectionOrder = selectionOrder
+        };
+
+        _context.AllianceMembers.Add(member);
+
+        var pick = new AlliancePick
+        {
+            AllianceSelectionId = selection.Id,
+            AllianceNumber = selection.CurrentAlliance,
+            Round = selection.CurrentRound,
+            PickOrder = selection.Picks.Count + 1,
+            InvitingTeamId = alliance.CaptainTeamId,
+            InvitedTeamId = team.Id,
+            Result = "Accepted",
+            Timestamp = DateTime.UtcNow
+        };
+
+        _context.AlliancePicks.Add(pick);
+
+        // Advance the state machine after the pick.
+        //
+        // Round 1: 1 -> 8
+        // Round 2: 8 -> 1
+        if (selection.CurrentRound == 1)
+        {
+            if (selection.CurrentAlliance < 8)
+            {
+                selection.CurrentAlliance++;
+            }
+            else
+            {
+                // Alliance 8 just made its pick. Begin Round 2.
+                selection.CurrentRound = 2;
+                selection.CurrentAlliance = 8;
+            }
         }
         else
         {
-            // Alliance 8 just made its second pick.
-            // Begin Round 2 with Alliance 8.
-            selection.CurrentRound = 2;
-            selection.CurrentAlliance = 8;
+            if (selection.CurrentAlliance > 1)
+            {
+                selection.CurrentAlliance--;
+            }
+            else
+            {
+                // Alliance 1 just made its final pick.
+                selection.Status = "Completed";
+                selection.CompletedAt = DateTime.UtcNow;
+            }
         }
-    }
-    else
-    {
-        if (selection.CurrentAlliance > 1)
-        {
-            selection.CurrentAlliance--;
-        }
-        else
-        {
-            // Alliance 1 just made its second pick.
-            selection.Status = "Completed";
-            selection.CompletedAt = DateTime.UtcNow;
-        }
-    }
 
-    await _context.SaveChangesAsync();
+        await _context.SaveChangesAsync();
 
-    return Ok(new
-    {
-        success = true,
-        allianceNumber = alliance.AllianceNumber,
-        teamId = team.Id,
-        teamNumber = team.TeamNumber,
-        selectionRound = pick.Round,
-        selectionOrder,
-        status = selection.Status,
-        nextRound = selection.CurrentRound,
-        nextAlliance = selection.CurrentAlliance
-    });
-}
+        return Ok(new
+        {
+            success = true,
+            allianceNumber = alliance.AllianceNumber,
+            teamId = team.Id,
+            teamNumber = team.TeamNumber,
+            selectionRound = pick.Round,
+            selectionOrder,
+            status = selection.Status,
+            nextRound = selection.CurrentRound,
+            nextAlliance = selection.CurrentAlliance
+        });
+    }
 }
 
 public class StartAllianceSelectionRequest
@@ -362,4 +381,3 @@ public class PickAllianceTeamRequest
 
     public int TeamId { get; set; }
 }
-

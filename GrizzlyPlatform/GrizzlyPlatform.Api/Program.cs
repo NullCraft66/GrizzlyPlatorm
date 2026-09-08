@@ -72,12 +72,6 @@ using (var scope = app.Services.CreateScope())
 
 app.MapGet("/", () => "GRIZZLY PLATFORM CURRENT BUILD");
 
-app.MapGet("/api/test", () => new
-{
-    status = "online",
-    message = "NEW TEST ENDPOINT"
-});
-
 app.UseCors("ScoutingClients");
 
 app.MapControllers();

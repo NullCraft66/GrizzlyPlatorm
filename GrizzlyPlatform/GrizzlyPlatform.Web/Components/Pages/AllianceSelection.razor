@@ -422,25 +422,14 @@ var pitForm = forms?
             })
             .ToList();
 
-var scoutingResponse =
-    await Http.GetFromJsonAsync<JsonElement>(
-        $"api/GameFormSubmissions?formType=Pit");
-
-if (scoutingResponse.TryGetProperty("value", out var submissionsValue))
-{
-    scoutingSubmissions =
-        JsonSerializer.Deserialize<List<ScoutingSubmissionModel>>(
-            submissionsValue.GetRawText(),
-            new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            })
-        ?? new List<ScoutingSubmissionModel>();
-}
-else
-{
-    scoutingSubmissions.Clear();
-}
+scoutingSubmissions =
+    await Http.GetFromJsonAsync<List<ScoutingSubmissionModel>>(
+        $"api/GameFormSubmissions?formType=Pit",
+        new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        })
+    ?? new List<ScoutingSubmissionModel>();
 
 foreach (var field in scoutingFields)
 {
@@ -875,11 +864,6 @@ private class ScoutingOptionModel
 {
     public int Id { get; set; }
     public string Value { get; set; } = "";
-}
-
-private class ScoutingSubmissionResponse
-{
-    public List<ScoutingSubmissionModel> Value { get; set; } = new();
 }
 
 private class ScoutingSubmissionModel

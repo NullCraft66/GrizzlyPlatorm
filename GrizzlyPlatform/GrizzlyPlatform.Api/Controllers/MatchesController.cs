@@ -16,74 +16,44 @@ public class MatchesController : ControllerBase
         _context = context;
     }
 
+    private static int MatchTypeSortOrder(string? matchType) => matchType switch
+    {
+        "Qualification" => 1,
+        "EighthFinal"   => 2,
+        "Quarterfinal"  => 3,
+        "Semifinal"     => 4,
+        "Final"         => 5,
+        _               => 6
+    };
+
     [HttpGet]
     public async Task<IActionResult> GetMatches()
     {
         var matches = await _context.Matches
-          .Select(m => new
-{
-    m.Id,
-    m.EventId,
-    m.MatchType,
-    m.MatchNumber,
-    m.SetNumber,
-    m.RedScore,
-    m.BlueScore,
-    m.WinningAlliance,
+            .Select(m => new
+            {
+                m.Id,
+                m.EventId,
+                m.MatchType,
+                m.MatchNumber,
+                m.SetNumber,
+                m.RedScore,
+                m.BlueScore,
+                m.WinningAlliance,
 
-                redTeam1 = new
-                {
-                    m.RedTeam1!.Id,
-                    m.RedTeam1.TeamNumber,
-                    m.RedTeam1.Name
-                },
-
-                redTeam2 = new
-                {
-                    m.RedTeam2!.Id,
-                    m.RedTeam2.TeamNumber,
-                    m.RedTeam2.Name
-                },
-
-                redTeam3 = new
-                {
-                    m.RedTeam3!.Id,
-                    m.RedTeam3.TeamNumber,
-                    m.RedTeam3.Name
-                },
-
-                blueTeam1 = new
-                {
-                    m.BlueTeam1!.Id,
-                    m.BlueTeam1.TeamNumber,
-                    m.BlueTeam1.Name
-                },
-
-                blueTeam2 = new
-                {
-                    m.BlueTeam2!.Id,
-                    m.BlueTeam2.TeamNumber,
-                    m.BlueTeam2.Name
-                },
-
-                blueTeam3 = new
-                {
-                    m.BlueTeam3!.Id,
-                    m.BlueTeam3.TeamNumber,
-                    m.BlueTeam3.Name
-                }
+                redTeam1 = new { m.RedTeam1!.Id, m.RedTeam1.TeamNumber, m.RedTeam1.Name },
+                redTeam2 = new { m.RedTeam2!.Id, m.RedTeam2.TeamNumber, m.RedTeam2.Name },
+                redTeam3 = new { m.RedTeam3!.Id, m.RedTeam3.TeamNumber, m.RedTeam3.Name },
+                blueTeam1 = new { m.BlueTeam1!.Id, m.BlueTeam1.TeamNumber, m.BlueTeam1.Name },
+                blueTeam2 = new { m.BlueTeam2!.Id, m.BlueTeam2.TeamNumber, m.BlueTeam2.Name },
+                blueTeam3 = new { m.BlueTeam3!.Id, m.BlueTeam3.TeamNumber, m.BlueTeam3.Name }
             })
-            .OrderBy(m =>
-                m.MatchType == "Qualification" ? 1 :
-                m.MatchType == "EighthFinal" ? 2 :
-                m.MatchType == "Quarterfinal" ? 3 :
-                m.MatchType == "Semifinal" ? 4 :
-                m.MatchType == "Final" ? 5 : 6)
-            .ThenBy(m => m.MatchNumber)
-            .ThenBy(m => m.SetNumber)
             .ToListAsync();
 
-        return Ok(matches);
+        return Ok(matches
+            .OrderBy(m => MatchTypeSortOrder(m.MatchType))
+            .ThenBy(m => m.MatchNumber)
+            .ThenBy(m => m.SetNumber));
     }
 
     [HttpGet("event/{eventId}")]
@@ -98,198 +68,84 @@ public class MatchesController : ControllerBase
                 m.MatchType,
                 m.MatchNumber,
                 m.SetNumber,
-
                 m.RedScore,
                 m.BlueScore,
                 m.WinningAlliance,
 
-                redTeam1 = new
-                {
-                    m.RedTeam1!.Id,
-                    m.RedTeam1.TeamNumber,
-                    m.RedTeam1.Name
-                },
-
-                redTeam2 = new
-                {
-                    m.RedTeam2!.Id,
-                    m.RedTeam2.TeamNumber,
-                    m.RedTeam2.Name
-                },
-
-                redTeam3 = new
-                {
-                    m.RedTeam3!.Id,
-                    m.RedTeam3.TeamNumber,
-                    m.RedTeam3.Name
-                },
-
-                blueTeam1 = new
-                {
-                    m.BlueTeam1!.Id,
-                    m.BlueTeam1.TeamNumber,
-                    m.BlueTeam1.Name
-                },
-
-                blueTeam2 = new
-                {
-                    m.BlueTeam2!.Id,
-                    m.BlueTeam2.TeamNumber,
-                    m.BlueTeam2.Name
-                },
-
-                blueTeam3 = new
-                {
-                    m.BlueTeam3!.Id,
-                    m.BlueTeam3.TeamNumber,
-                    m.BlueTeam3.Name
-                }
+                redTeam1 = new { m.RedTeam1!.Id, m.RedTeam1.TeamNumber, m.RedTeam1.Name },
+                redTeam2 = new { m.RedTeam2!.Id, m.RedTeam2.TeamNumber, m.RedTeam2.Name },
+                redTeam3 = new { m.RedTeam3!.Id, m.RedTeam3.TeamNumber, m.RedTeam3.Name },
+                blueTeam1 = new { m.BlueTeam1!.Id, m.BlueTeam1.TeamNumber, m.BlueTeam1.Name },
+                blueTeam2 = new { m.BlueTeam2!.Id, m.BlueTeam2.TeamNumber, m.BlueTeam2.Name },
+                blueTeam3 = new { m.BlueTeam3!.Id, m.BlueTeam3.TeamNumber, m.BlueTeam3.Name }
             })
-            .OrderBy(m =>
-                m.MatchType == "Qualification" ? 1 :
-                m.MatchType == "EighthFinal" ? 2 :
-                m.MatchType == "Quarterfinal" ? 3 :
-                m.MatchType == "Semifinal" ? 4 :
-                m.MatchType == "Final" ? 5 : 6)
-            .ThenBy(m => m.MatchNumber)
-            .ThenBy(m => m.SetNumber)
             .ToListAsync();
 
-        return Ok(matches);
+        return Ok(matches
+            .OrderBy(m => MatchTypeSortOrder(m.MatchType))
+            .ThenBy(m => m.MatchNumber)
+            .ThenBy(m => m.SetNumber));
     }
-[HttpGet("team/{teamId}")]
-public async Task<IActionResult> GetMatchesForTeam(int teamId)
-{
-    var matches = await _context.Matches
-        .Where(m =>
-            m.RedTeam1Id == teamId ||
-            m.RedTeam2Id == teamId ||
-            m.RedTeam3Id == teamId ||
-            m.BlueTeam1Id == teamId ||
-            m.BlueTeam2Id == teamId ||
-            m.BlueTeam3Id == teamId)
-        .Select(m => new
-        {
-            m.Id,
-            m.EventId,
-            m.MatchType,
-            m.MatchNumber,
-            m.SetNumber,
-            m.RedScore,
-            m.BlueScore,
-            m.WinningAlliance,
 
-            redTeam1 = new
+    [HttpGet("team/{teamId}")]
+    public async Task<IActionResult> GetMatchesForTeam(int teamId)
+    {
+        var matches = await _context.Matches
+            .Where(m =>
+                m.RedTeam1Id == teamId ||
+                m.RedTeam2Id == teamId ||
+                m.RedTeam3Id == teamId ||
+                m.BlueTeam1Id == teamId ||
+                m.BlueTeam2Id == teamId ||
+                m.BlueTeam3Id == teamId)
+            .Select(m => new
             {
-                m.RedTeam1!.Id,
-                m.RedTeam1.TeamNumber,
-                m.RedTeam1.Name
-            },
+                m.Id,
+                m.EventId,
+                m.MatchType,
+                m.MatchNumber,
+                m.SetNumber,
+                m.RedScore,
+                m.BlueScore,
+                m.WinningAlliance,
 
-            redTeam2 = new
-            {
-                m.RedTeam2!.Id,
-                m.RedTeam2.TeamNumber,
-                m.RedTeam2.Name
-            },
+                redTeam1 = new { m.RedTeam1!.Id, m.RedTeam1.TeamNumber, m.RedTeam1.Name },
+                redTeam2 = new { m.RedTeam2!.Id, m.RedTeam2.TeamNumber, m.RedTeam2.Name },
+                redTeam3 = new { m.RedTeam3!.Id, m.RedTeam3.TeamNumber, m.RedTeam3.Name },
+                blueTeam1 = new { m.BlueTeam1!.Id, m.BlueTeam1.TeamNumber, m.BlueTeam1.Name },
+                blueTeam2 = new { m.BlueTeam2!.Id, m.BlueTeam2.TeamNumber, m.BlueTeam2.Name },
+                blueTeam3 = new { m.BlueTeam3!.Id, m.BlueTeam3.TeamNumber, m.BlueTeam3.Name }
+            })
+            .ToListAsync();
 
-            redTeam3 = new
-            {
-                m.RedTeam3!.Id,
-                m.RedTeam3.TeamNumber,
-                m.RedTeam3.Name
-            },
-
-            blueTeam1 = new
-            {
-                m.BlueTeam1!.Id,
-                m.BlueTeam1.TeamNumber,
-                m.BlueTeam1.Name
-            },
-
-            blueTeam2 = new
-            {
-                m.BlueTeam2!.Id,
-                m.BlueTeam2.TeamNumber,
-                m.BlueTeam2.Name
-            },
-
-            blueTeam3 = new
-            {
-                m.BlueTeam3!.Id,
-                m.BlueTeam3.TeamNumber,
-                m.BlueTeam3.Name
-            }
-        })
-        .OrderBy(m =>
-            m.MatchType == "Qualification" ? 1 :
-            m.MatchType == "EighthFinal" ? 2 :
-            m.MatchType == "Quarterfinal" ? 3 :
-            m.MatchType == "Semifinal" ? 4 :
-            m.MatchType == "Final" ? 5 : 6)
-        .ThenBy(m => m.MatchNumber)
-        .ThenBy(m => m.SetNumber)
-        .ToListAsync();
-
-    return Ok(matches);
-}
+        return Ok(matches
+            .OrderBy(m => MatchTypeSortOrder(m.MatchType))
+            .ThenBy(m => m.MatchNumber)
+            .ThenBy(m => m.SetNumber));
+    }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetMatch(int id)
     {
         var match = await _context.Matches
             .Where(m => m.Id == id)
-          .Select(m => new
-{
-    m.Id,
-    m.EventId,
-    m.MatchType,
-    m.MatchNumber,
-    m.SetNumber,
-    m.RedScore,
-    m.BlueScore,
-    m.WinningAlliance,
+            .Select(m => new
+            {
+                m.Id,
+                m.EventId,
+                m.MatchType,
+                m.MatchNumber,
+                m.SetNumber,
+                m.RedScore,
+                m.BlueScore,
+                m.WinningAlliance,
 
-    redTeam1 = new
-    {
-        m.RedTeam1!.Id,
-        m.RedTeam1.TeamNumber,
-        m.RedTeam1.Name
-    },
-                redTeam2 = new
-                {
-                    m.RedTeam2!.Id,
-                    m.RedTeam2.TeamNumber,
-                    m.RedTeam2.Name
-                },
-
-                redTeam3 = new
-                {
-                    m.RedTeam3!.Id,
-                    m.RedTeam3.TeamNumber,
-                    m.RedTeam3.Name
-                },
-
-                blueTeam1 = new
-                {
-                    m.BlueTeam1!.Id,
-                    m.BlueTeam1.TeamNumber,
-                    m.BlueTeam1.Name
-                },
-
-                blueTeam2 = new
-                {
-                    m.BlueTeam2!.Id,
-                    m.BlueTeam2.TeamNumber,
-                    m.BlueTeam2.Name
-                },
-
-                blueTeam3 = new
-                {
-                    m.BlueTeam3!.Id,
-                    m.BlueTeam3.TeamNumber,
-                    m.BlueTeam3.Name
-                }
+                redTeam1 = new { m.RedTeam1!.Id, m.RedTeam1.TeamNumber, m.RedTeam1.Name },
+                redTeam2 = new { m.RedTeam2!.Id, m.RedTeam2.TeamNumber, m.RedTeam2.Name },
+                redTeam3 = new { m.RedTeam3!.Id, m.RedTeam3.TeamNumber, m.RedTeam3.Name },
+                blueTeam1 = new { m.BlueTeam1!.Id, m.BlueTeam1.TeamNumber, m.BlueTeam1.Name },
+                blueTeam2 = new { m.BlueTeam2!.Id, m.BlueTeam2.TeamNumber, m.BlueTeam2.Name },
+                blueTeam3 = new { m.BlueTeam3!.Id, m.BlueTeam3.TeamNumber, m.BlueTeam3.Name }
             })
             .FirstOrDefaultAsync();
 
@@ -314,9 +170,7 @@ public async Task<IActionResult> GetMatchesForTeam(int teamId)
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateMatch(
-        int id,
-        Match updatedMatch)
+    public async Task<IActionResult> UpdateMatch(int id, Match updatedMatch)
     {
         var match = await _context.Matches.FindAsync(id);
 
