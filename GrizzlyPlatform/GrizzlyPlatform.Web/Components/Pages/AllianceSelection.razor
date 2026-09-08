@@ -1,0 +1,601 @@
+@page "/allianceselection"
+@rendermode InteractiveServer
+@using GrizzlyPlatform.Web.Models
+@inject HttpClient Http
+<PageTitle>Alliance Selection</PageTitle>
+
+<h1>Alliance Selection</h1>
+
+<div class="alliance-selection-page">
+
+    <div class="selection-header">
+        <div>
+            <h2>Event</h2>
+
+            <select @bind="selectedEventId"
+                    @bind:after="EventChanged">
+                <option value="0">Select an event</option>
+
+                @foreach (var eventItem in events)
+                {
+                    <option value="@eventItem.Id">
+                        @eventItem.Name
+                    </option>
+                }
+            </select>
+        </div>
+
+        @if (selectedEventId > 0)
+        {
+            <div class="selection-status">
+                <strong>Status:</strong>
+                @(selection?.Status ?? "Not Started")
+            </div>
+        }
+    </div>
+
+    @if (selectedEventId == 0)
+    {
+        <div class="empty-state">
+            <h2>Select an event</h2>
+            <p>Choose an event to begin Alliance Selection.</p>
+        </div>
+    }
+    else if (loading)
+    {
+        <p>Loading Alliance Selection...</p>
+    }
+    else
+    {
+        <section class="top-eight-section">
+            <div class="section-header">
+                <div>
+                    <h2>Top 8 Alliance Captains</h2>
+                    <p>
+                        These teams are the current alliance captains,
+                        ranked 1 through 8.
+                    </p>
+                </div>
+
+                @if (selection == null || selection.Status == "NotStarted")
+                {
+                    <button type="button"
+                            @onclick="StartSelection"
+                            disabled="@(topEight.Count != 8)">
+                        Start Alliance Selection
+                    </button>
+                }
+            </div>
+
+            @if (topEight.Count == 0)
+            {
+                <div class="empty-state">
+                    <p>No ranked teams are available for this event.</p>
+                </div>
+            }
+            else
+            {
+                <div class="top-eight-grid">
+                    @foreach (var team in topEight.OrderBy(t => t.Rank))
+                    {
+                        <div class="captain-card">
+                            <div class="captain-rank">
+                                @team.Rank
+                            </div>
+
+                            <div class="captain-team">
+                                <strong>@team.TeamNumber</strong>
+                                <span>@team.TeamName</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </section>
+
+        <section class="team-selection-section">
+
+            <div class="section-header">
+                <div>
+                    <h2>Available Teams</h2>
+                    <p>
+                        Search and filter teams using scouting information.
+                    </p>
+                </div>
+            </div>
+
+            <div class="filters">
+
+                <div class="filter-group">
+                    <label>Search</label>
+
+                    <input @bind="searchText"
+                           @bind:event="oninput"
+                           placeholder="Team number or name..." />
+                </div>
+
+                <div class="filter-group">
+                    <label>Sort By</label>
+
+                    <select @bind="sortOption">
+                        <option value="Rank">Event Ranking</option>
+                        <option value="TeamNumber">Team Number</option>
+                        <option value="TeamName">Team Name</option>
+                    </select>
+                </div>
+
+                <div class="filter-group">
+                    <label>Order</label>
+
+                    <select @bind="sortDescending">
+                        <option value="false">Best → Worst</option>
+                        <option value="true">Worst → Best</option>
+                    </select>
+                </div>
+
+            </div>
+
+            @if (filteredTeams.Count == 0)
+            {
+                <div class="empty-state">
+                    <p>No teams match the current filters.</p>
+                </div>
+            }
+            else
+            {
+                <div class="team-list">
+
+                    @foreach (var team in GetSortedTeams())
+                    {
+                        <div class="team-row">
+
+                            <div class="team-rank">
+                                #@team.Rank
+                            </div>
+
+                            <div class="team-info">
+                                <strong>@team.TeamNumber</strong>
+                                <span>@team.TeamName</span>
+                            </div>
+
+                            <div class="team-actions">
+                                @if (IsCaptain(team.TeamId))
+                                {
+                                    <span class="team-badge captain">
+                                        Captain
+                                    </span>
+                                }
+                                else if (IsSelected(team.TeamId))
+                                {
+                                    <span class="team-badge selected">
+                                        Selected
+                                    </span>
+                                }
+                                else
+                                {
+                                    <button type="button"
+                                            @onclick="() => SelectTeam(team)">
+                                        Select
+                                    </button>
+                                }
+                            </div>
+
+                        </div>
+                    }
+
+                </div>
+            }
+
+        </section>
+
+        @if (selection != null)
+        {
+            <section class="alliances-section">
+
+                <div class="section-header">
+                    <div>
+                        <h2>Alliances</h2>
+                        <p>
+                            Current alliance selections.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="alliances-grid">
+
+                    @foreach (var alliance in selection.Alliances
+                        .OrderBy(a => a.AllianceNumber))
+                    {
+                        <div class="alliance-card">
+
+                            <div class="alliance-header">
+                                <strong>
+                                    Alliance @alliance.AllianceNumber
+                                </strong>
+                            </div>
+
+                            <div class="alliance-captain">
+                                <span>Captain</span>
+
+                                <strong>
+                                    @alliance.CaptainTeamNumber
+                                    @if (!string.IsNullOrWhiteSpace(
+                                        alliance.CaptainTeamName))
+                                    {
+                                        <span>
+                                            - @alliance.CaptainTeamName
+                                        </span>
+                                    }
+                                </strong>
+                            </div>
+
+                            @foreach (var member in alliance.Members
+                                .OrderBy(m => m.SelectionOrder))
+                            {
+                                <div class="alliance-member">
+                                    <span>
+                                        Pick @member.SelectionOrder
+                                    </span>
+
+                                    <strong>
+                                        @member.TeamNumber
+                                        @if (!string.IsNullOrWhiteSpace(
+                                            member.TeamName))
+                                        {
+                                            <span>
+                                                - @member.TeamName
+                                            </span>
+                                        }
+                                    </strong>
+                                </div>
+                            }
+
+                        </div>
+                    }
+
+                </div>
+
+            </section>
+        }
+    }
+
+</div>
+
+@code {
+
+    private List<EventModel> events = new();
+
+    private List<AllianceTeamModel> topEight = new();
+
+    private List<AllianceTeamModel> filteredTeams = new();
+
+    private AllianceSelectionModel? selection;
+
+    private int selectedEventId;
+
+    private string searchText = "";
+
+    private string sortOption = "Rank";
+
+    private bool sortDescending;
+
+    private bool loading;
+
+    private async Task LoadEvents()
+    {
+        events = await Http.GetFromJsonAsync<List<EventModel>>(
+            "api/Events") ?? new List<EventModel>();
+    }
+
+    private async Task EventChanged()
+    {
+        if (selectedEventId <= 0)
+        {
+            topEight.Clear();
+            filteredTeams.Clear();
+            selection = null;
+            return;
+        }
+
+        await LoadAllianceSelection();
+    }
+
+    private async Task LoadAllianceSelection()
+    {
+        loading = true;
+
+        try
+        {
+            selection = null;
+
+            var response =
+                await Http.GetAsync(
+                    $"api/AllianceSelection/event/{selectedEventId}");
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return;
+            }
+
+            var result =
+                await response.Content
+                    .ReadFromJsonAsync<AllianceSelectionResponse>();
+
+            if (result == null)
+            {
+                return;
+            }
+
+            if (result.Exists && result.Selection != null)
+            {
+                selection = result.Selection;
+
+                topEight = selection.Alliances
+                    .OrderBy(a => a.AllianceNumber)
+                    .Select(a => new AllianceTeamModel
+                    {
+                        TeamId = a.CaptainTeamId,
+                        TeamNumber = a.CaptainTeamNumber ?? 0,
+                        TeamName = a.CaptainTeamName ?? "",
+                        Rank = a.AllianceNumber
+                    })
+                    .ToList();
+            }
+            else
+            {
+                await LoadRankedTeams();
+            }
+
+            ApplyFilters();
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+private async Task LoadRankedTeams()
+{
+    var response =
+        await Http.GetAsync(
+            $"api/EventTeams/event/{selectedEventId}");
+
+    if (!response.IsSuccessStatusCode)
+    {
+        topEight.Clear();
+        filteredTeams.Clear();
+        return;
+    }
+
+    var teams =
+        await response.Content
+            .ReadFromJsonAsync<List<EventTeamResponse>>()
+        ?? new List<EventTeamResponse>();
+
+    var convertedTeams = teams
+        .Where(t => t.Team != null)
+        .Select((t, index) => new AllianceTeamModel
+        {
+            TeamId = t.Team!.Id,
+            TeamNumber = t.Team.TeamNumber,
+            TeamName = t.Team.Name,
+            Rank = index + 1
+        })
+        .ToList();
+
+    filteredTeams = convertedTeams;
+
+    topEight = convertedTeams
+        .Take(8)
+        .ToList();
+}
+private void ApplyFilters()
+    {
+        var query = filteredTeams.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(searchText))
+        {
+            query = query.Where(t =>
+                t.TeamNumber
+                    .ToString()
+                    .Contains(
+                        searchText,
+                        StringComparison.OrdinalIgnoreCase)
+                ||
+                t.TeamName.Contains(
+                    searchText,
+                    StringComparison.OrdinalIgnoreCase));
+        }
+
+        filteredTeams = query.ToList();
+    }
+
+    private IEnumerable<AllianceTeamModel> GetSortedTeams()
+    {
+        ApplyFilters();
+
+        IEnumerable<AllianceTeamModel> result = sortOption switch
+        {
+            "TeamNumber" =>
+                filteredTeams.OrderBy(t => t.TeamNumber),
+
+            "TeamName" =>
+                filteredTeams.OrderBy(t => t.TeamName),
+
+            _ =>
+                filteredTeams.OrderBy(t => t.Rank)
+        };
+
+        if (sortDescending)
+        {
+            result = result.Reverse();
+        }
+
+        return result;
+    }
+
+    private bool IsCaptain(int teamId)
+    {
+        return selection?.Alliances
+            .Any(a => a.CaptainTeamId == teamId) == true;
+    }
+
+    private bool IsSelected(int teamId)
+    {
+        return selection?.Alliances
+            .SelectMany(a => a.Members)
+            .Any(m => m.TeamId == teamId) == true;
+    }
+
+    private async Task StartSelection()
+    {
+        if (topEight.Count != 8)
+        {
+            return;
+        }
+
+        var request = new StartAllianceSelectionRequest
+        {
+            EventId = selectedEventId,
+            TeamIds = topEight
+                .OrderBy(t => t.Rank)
+                .Select(t => t.TeamId)
+                .ToList()
+        };
+
+        var response =
+            await Http.PostAsJsonAsync(
+                "api/AllianceSelection/start",
+                request);
+
+        if (response.IsSuccessStatusCode)
+        {
+            await LoadAllianceSelection();
+        }
+        else
+        {
+            var message = await response.Content.ReadAsStringAsync();
+
+            Console.WriteLine(message);
+        }
+    }
+
+    private async Task SelectTeam(AllianceTeamModel team)
+    {
+        if (selection == null)
+        {
+            return;
+        }
+
+        var request = new PickAllianceTeamRequest
+        {
+            AllianceSelectionId = selection.Id,
+            AllianceNumber = selection.CurrentAlliance,
+            TeamId = team.TeamId
+        };
+
+        var response =
+            await Http.PostAsJsonAsync(
+                "api/AllianceSelection/pick",
+                request);
+
+        if (response.IsSuccessStatusCode)
+        {
+            await LoadAllianceSelection();
+        }
+        else
+        {
+            var message = await response.Content.ReadAsStringAsync();
+
+            Console.WriteLine(message);
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEvents();
+    }
+
+    private class AllianceTeamModel
+    {
+        public int TeamId { get; set; }
+        public int TeamNumber { get; set; }
+        public string TeamName { get; set; } = "";
+        public int Rank { get; set; }
+    }
+
+    private class AllianceSelectionResponse
+    {
+        public bool Exists { get; set; }
+        public int EventId { get; set; }
+        public int Id { get; set; }
+        public string Status { get; set; } = "";
+        public int CurrentRound { get; set; }
+        public int CurrentAlliance { get; set; }
+        public AllianceSelectionModel? Selection { get; set; }
+    }
+
+    private class AllianceSelectionModel
+    {
+        public int Id { get; set; }
+        public int EventId { get; set; }
+        public string Status { get; set; } = "";
+        public int CurrentRound { get; set; }
+        public int CurrentAlliance { get; set; }
+        public List<AllianceModel> Alliances { get; set; } = new();
+    }
+
+    private class AllianceModel
+    {
+        public int Id { get; set; }
+        public int AllianceNumber { get; set; }
+        public int CaptainTeamId { get; set; }
+        public int? CaptainTeamNumber { get; set; }
+        public string? CaptainTeamName { get; set; }
+        public List<AllianceMemberModel> Members { get; set; } = new();
+    }
+
+    private class AllianceMemberModel
+    {
+        public int TeamId { get; set; }
+        public int? TeamNumber { get; set; }
+        public string? TeamName { get; set; }
+        public int SelectionRound { get; set; }
+        public int SelectionOrder { get; set; }
+    }
+
+private class EventTeamsResponse
+{
+    public List<EventTeamResponse> Value { get; set; } = new();
+    public int Count { get; set; }
+}
+
+private class EventTeamResponse
+{
+    public int Id { get; set; }
+    public int EventId { get; set; }
+    public int TeamId { get; set; }
+    public EventTeamTeamResponse? Team { get; set; }
+}
+
+private class EventTeamTeamResponse
+{
+    public int Id { get; set; }
+    public int TeamNumber { get; set; }
+    public string Name { get; set; } = "";
+}
+
+    private class StartAllianceSelectionRequest
+    {
+        public int EventId { get; set; }
+        public List<int> TeamIds { get; set; } = new();
+    }
+
+    private class PickAllianceTeamRequest
+    {
+        public int AllianceSelectionId { get; set; }
+        public int AllianceNumber { get; set; }
+        public int TeamId { get; set; }
+    }
+}
+

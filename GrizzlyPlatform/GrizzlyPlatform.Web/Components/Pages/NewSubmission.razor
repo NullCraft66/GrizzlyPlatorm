@@ -273,6 +273,31 @@ private async Task TeamNumberChanged()
     }
 }
 
+private async Task EventChanged(ChangeEventArgs e)
+{
+    selectedEventId = int.TryParse(
+        e.Value?.ToString(),
+        out var id)
+        ? id
+        : 0;
+
+    selectedMatchId = 0;
+    matches.Clear();
+
+    eventId = selectedEventId > 0
+        ? selectedEventId
+        : null;
+
+    matchNumber = null;
+    matchType = "";
+    setNumber = null;
+
+    if (selectedEventId > 0)
+    {
+        await LoadTeamMatches();
+    }
+}
+
 private async Task LoadTeamMatches()
 {
     matches.Clear();
@@ -315,32 +340,6 @@ private async Task LoadTeamMatches()
         .Where(m => m.EventId == selectedEventId)
         .ToList();
 }
-private async Task EventChanged(ChangeEventArgs e)
-{
-    selectedEventId = int.TryParse(
-        e.Value?.ToString(),
-        out var id)
-        ? id
-        : 0;
-
-    selectedMatchId = 0;
-    matches.Clear();
-
-    eventId = selectedEventId > 0
-        ? selectedEventId
-        : null;
-
-    matchNumber = null;
-    matchType = "";
-
-    if (selectedEventId > 0)
-    {
-        matches = await Http.GetFromJsonAsync<List<MatchModel>>(
-            $"api/Matches/event/{selectedEventId}")
-            ?? new List<MatchModel>();
-    }
-}
-
 private void MatchChanged(ChangeEventArgs e)
 {
     selectedMatchId = int.TryParse(

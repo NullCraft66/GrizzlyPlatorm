@@ -1,24 +1,9 @@
-@using GrizzlyPlatform.Web.Services
-@inject AuthState AuthState
 
 <Router AppAssembly="typeof(Program).Assembly"
         NotFoundPage="typeof(Pages.NotFound)">
     <Found Context="routeData">
-        @if (routeData.PageType == typeof(Pages.Login))
-        {
-            <RouteView RouteData="routeData"
-                       DefaultLayout="typeof(Layout.MainLayout)" />
-        }
-        else if (AuthState.IsLoggedIn)
-        {
-            <RouteView RouteData="routeData"
-                       DefaultLayout="typeof(Layout.MainLayout)" />
-        }
-        else
-        {
-            <RedirectToLogin />
-        }
-
+       <RouteView RouteData="routeData"
+           DefaultLayout="typeof(Layout.MainLayout)" />
         <FocusOnNavigate RouteData="routeData"
                          Selector="h1" />
     </Found>

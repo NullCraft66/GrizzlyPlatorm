@@ -24,6 +24,11 @@ public class GrizzlyDbContext : DbContext
     public DbSet<ActiveScoutingConfiguration>
     ActiveScoutingConfigurations { get; set; }
 
+    public DbSet<AllianceSelection> AllianceSelections { get; set; }
+    public DbSet<Alliance> Alliances { get; set; }
+    public DbSet<AllianceMember> AllianceMembers { get; set; }
+    public DbSet<AlliancePick> AlliancePicks { get; set; }
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -104,6 +109,70 @@ public class GrizzlyDbContext : DbContext
             .WithMany()
             .HasForeignKey(c => c.ActiveMatchFormId)
             .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<AllianceSelection>()
+            .HasOne(a => a.Event)
+            .WithMany()
+            .HasForeignKey(a => a.EventId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Alliance>()
+            .HasOne(a => a.AllianceSelection)
+            .WithMany(s => s.Alliances)
+            .HasForeignKey(a => a.AllianceSelectionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Alliance>()
+            .HasOne(a => a.CaptainTeam)
+            .WithMany()
+            .HasForeignKey(a => a.CaptainTeamId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AllianceMember>()
+            .HasOne(m => m.Alliance)
+            .WithMany(a => a.Members)
+            .HasForeignKey(m => m.AllianceId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<AllianceMember>()
+            .HasOne(m => m.Team)
+            .WithMany()
+            .HasForeignKey(m => m.TeamId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AlliancePick>()
+            .HasOne(p => p.AllianceSelection)
+            .WithMany(s => s.Picks)
+            .HasForeignKey(p => p.AllianceSelectionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<AlliancePick>()
+            .HasOne(p => p.InvitingTeam)
+            .WithMany()
+            .HasForeignKey(p => p.InvitingTeamId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AlliancePick>()
+            .HasOne(p => p.InvitedTeam)
+            .WithMany()
+            .HasForeignKey(p => p.InvitedTeamId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Alliance>()
+            .HasIndex(a => new
+            {
+                a.AllianceSelectionId,
+                a.AllianceNumber
+            })
+            .IsUnique();
+
+        modelBuilder.Entity<AllianceMember>()
+            .HasIndex(m => new
+            {
+                m.AllianceId,
+                m.TeamId
+            })
+            .IsUnique();
     }
 }
 
