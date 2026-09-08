@@ -27,10 +27,6 @@ build_property.EnableCodeStyleSeverity =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xBcHAucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/YCSRobotics/GrizzlyPlatorm/GrizzlyPlatform/GrizzlyPlatform.Web/Components/Pages/AllianceSelection.razor]
-build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBbGxpYW5jZVNlbGVjdGlvbi5yYXpvcg==
-build_metadata.AdditionalFiles.CssScope = 
-
 [C:/YCSRobotics/GrizzlyPlatorm/GrizzlyPlatform/GrizzlyPlatform.Web/Components/Pages/Counter.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xDb3VudGVyLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
@@ -102,6 +98,10 @@ build_metadata.AdditionalFiles.CssScope = b-h0lkk3m55u
 [C:/YCSRobotics/GrizzlyPlatorm/GrizzlyPlatform/GrizzlyPlatform.Web/Components/Layout/ReconnectModal.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcUmVjb25uZWN0TW9kYWwucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = b-kf8q27sy4h
+
+[C:/YCSRobotics/GrizzlyPlatorm/GrizzlyPlatform/GrizzlyPlatform.Web/Components/Pages/AllianceSelection.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBbGxpYW5jZVNlbGVjdGlvbi5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = b-8ey2o67wfr
 
 [C:/YCSRobotics/GrizzlyPlatorm/GrizzlyPlatform/GrizzlyPlatform.Web/Components/Pages/Events.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFdmVudHMucmF6b3I=

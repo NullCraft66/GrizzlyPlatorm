@@ -84,6 +84,7 @@ C:\YCSRobotics\GrizzlyPlatorm\GrizzlyPlatform\GrizzlyPlatform.Web\obj\Debug\net1
 C:\YCSRobotics\GrizzlyPlatorm\GrizzlyPlatform\GrizzlyPlatform.Web\obj\Debug\net10.0\scopedcss\Components\Pages\Events.razor.rz.scp.css
 C:\YCSRobotics\GrizzlyPlatorm\GrizzlyPlatform\GrizzlyPlatform.Web\obj\Debug\net10.0\scopedcss\Components\Pages\TeamDetails.razor.rz.scp.css
 C:\YCSRobotics\GrizzlyPlatorm\GrizzlyPlatform\GrizzlyPlatform.Web\obj\Debug\net10.0\scopedcss\Components\Pages\GameForms.razor.rz.scp.css
-C:\YCSRobotics\GrizzlyPlatorm\GrizzlyPlatform\GrizzlyPlatform.Web\obj\Debug\net10.0\compressed\vw6qa8bgpj-{0}-3nbr5oxq0b-3nbr5oxq0b.gz
-C:\YCSRobotics\GrizzlyPlatorm\GrizzlyPlatform\GrizzlyPlatform.Web\obj\Debug\net10.0\compressed\ssxr1fak9m-{0}-3nbr5oxq0b-3nbr5oxq0b.gz
 C:\YCSRobotics\GrizzlyPlatorm\GrizzlyPlatform\GrizzlyPlatform.Web\obj\Debug\net10.0\compressed\pehqw3gx8i-{0}-tvaqt3qfup-tvaqt3qfup.gz
+C:\YCSRobotics\GrizzlyPlatorm\GrizzlyPlatform\GrizzlyPlatform.Web\obj\Debug\net10.0\scopedcss\Components\Pages\AllianceSelection.razor.rz.scp.css
+C:\YCSRobotics\GrizzlyPlatorm\GrizzlyPlatform\GrizzlyPlatform.Web\obj\Debug\net10.0\compressed\vw6qa8bgpj-{0}-14jhld96ut-14jhld96ut.gz
+C:\YCSRobotics\GrizzlyPlatorm\GrizzlyPlatform\GrizzlyPlatform.Web\obj\Debug\net10.0\compressed\ssxr1fak9m-{0}-14jhld96ut-14jhld96ut.gz

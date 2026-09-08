@@ -1,0 +1,21 @@
+.alliance-selection-page select {
+    color: #212529;
+    background-color: #ffffff;
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    padding: 8px 12px;
+    min-width: 180px;
+}
+
+.alliance-selection-page select:focus {
+    color: #212529;
+    background-color: #ffffff;
+    border-color: #86b7fe;
+    outline: none;
+    box-shadow: 0 0 0 0.15rem rgba(13, 110, 253, 0.15);
+}
+
+.alliance-selection-page select option {
+    color: #212529;
+    background-color: #ffffff;
+}

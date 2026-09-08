@@ -135,6 +135,52 @@ public class GameFormSubmissionsController : ControllerBase
         return Ok(result);
     }
 
+// GET: api/GameFormSubmissions/event/1
+[HttpGet("event/{eventId}")]
+public async Task<IActionResult> GetSubmissionsForEvent(int eventId)
+{
+    var submissions = await _context.GameFormSubmissions
+        .Include(s => s.GameForm)
+            .ThenInclude(g => g!.Fields)
+        .Include(s => s.Match)
+        .Include(s => s.Team)
+        .Include(s => s.Answers)
+            .ThenInclude(a => a.GameFormField)
+       .Where(s =>
+    s.EventId == eventId ||
+    (s.Match != null && s.Match.EventId == eventId))
+        .OrderByDescending(s => s.SubmittedAt)
+        .ToListAsync();
+
+    var result = submissions.Select(s => new
+    {
+        id = s.Id,
+        gameFormId = s.GameFormId,
+        gameFormName = s.GameForm?.Name,
+        formType = s.GameForm?.FormType.ToString(),
+
+        eventId = s.Match?.EventId,
+        matchId = s.MatchId,
+        matchNumber = s.Match?.MatchNumber,
+        matchType = s.Match?.MatchType,
+
+        teamId = s.TeamId,
+        teamNumber = s.Team?.TeamNumber,
+        teamName = s.Team?.Name,
+
+        submittedAt = s.SubmittedAt,
+
+        answers = s.Answers.Select(a => new
+        {
+            fieldId = a.GameFormFieldId,
+            question = a.GameFormField?.Question,
+            value = a.Value
+        })
+    });
+
+    return Ok(result);
+}
+
     // POST: api/GameFormSubmissions
     [HttpPost]
     public async Task<IActionResult> CreateSubmission(
@@ -411,6 +457,7 @@ if (existingSubmission != null)
     {
         GameFormId = gameForm.Id,
         TeamId = team.Id,
+EventId = request.EventId,
         MatchId = match?.Id,
         SubmittedAt = DateTime.UtcNow,
         Answers = answers
