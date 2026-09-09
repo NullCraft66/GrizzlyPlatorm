@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("GrizzlyPlatform.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+696a54c6892b43e52460477066161f7d80ef6e38")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+299bc57998b1bf2de913b34d07c66f92658d5611")]
 [assembly: System.Reflection.AssemblyProductAttribute("GrizzlyPlatform.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("GrizzlyPlatform.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

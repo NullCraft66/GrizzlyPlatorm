@@ -17,4 +17,7 @@ public class AllianceSelection
 
     public List<Alliance> Alliances { get; set; } = new();
     public List<AlliancePick> Picks { get; set; } = new();
+    public List<AllianceRankedTeam> RankedTeams { get; set; } = new();
 }
+
+

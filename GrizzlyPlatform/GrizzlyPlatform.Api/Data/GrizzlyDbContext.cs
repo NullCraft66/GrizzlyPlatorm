@@ -28,6 +28,7 @@ public class GrizzlyDbContext : DbContext
     public DbSet<Alliance> Alliances { get; set; }
     public DbSet<AllianceMember> AllianceMembers { get; set; }
     public DbSet<AlliancePick> AlliancePicks { get; set; }
+    public DbSet<AllianceRankedTeam> AllianceRankedTeams { get; set; }
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -175,5 +176,6 @@ public class GrizzlyDbContext : DbContext
             .IsUnique();
     }
 }
+
 
 

@@ -3,6 +3,7 @@ using System;
 using GrizzlyPlatform.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GrizzlyPlatform.Api.Migrations
 {
     [DbContext(typeof(GrizzlyDbContext))]
-    partial class GrizzlyDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260909020409_AddAllianceRankedTeams")]
+    partial class AddAllianceRankedTeams
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.11");
@@ -154,7 +157,7 @@ namespace GrizzlyPlatform.Api.Migrations
 
                     b.HasIndex("TeamId");
 
-                    b.ToTable("AllianceRankedTeams");
+                    b.ToTable("AllianceRankedTeam");
                 });
 
             modelBuilder.Entity("GrizzlyPlatform.Api.Models.AllianceSelection", b =>

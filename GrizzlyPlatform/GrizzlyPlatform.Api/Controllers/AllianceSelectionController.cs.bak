@@ -30,13 +30,23 @@ public class AllianceSelectionController : ControllerBase
 
         _context.AllianceSelections.Remove(selection);
 
-        await _context.SaveChangesAsync();
+     await _context.SaveChangesAsync();
 
-        return Ok(new
-        {
-            success = true,
-            message = "Alliance Selection deleted successfully."
-        });
+return Ok(new
+{
+    success = true,
+    allianceNumber = request.AllianceNumber,
+    teamId = team.Id,
+    teamNumber = team.Number,
+    result = "Declined",
+    selectionRound = selection.CurrentRound,
+    selectionOrder = selection.Picks.Count(p =>
+        p.Round == selection.CurrentRound &&
+        p.AllianceNumber == request.AllianceNumber),
+    status = selection.Status,
+    nextRound = selection.CurrentRound,
+    nextAlliance = selection.CurrentAlliance
+});
     }
 
     // GET: api/AllianceSelection/event/1
@@ -629,7 +639,6 @@ public class PickAllianceTeamRequest
 
     public int TeamId { get; set; }
 }
-
 
 
 

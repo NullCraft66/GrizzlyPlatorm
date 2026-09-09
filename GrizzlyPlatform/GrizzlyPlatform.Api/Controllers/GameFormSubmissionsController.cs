@@ -296,8 +296,9 @@ public async Task<IActionResult> GetSubmissionsForEvent(int eventId)
             result);
     }
 
-       // POST: api/GameFormSubmissions/scout
-    [HttpPost("scout")]
+    // POST: api/GameFormSubmissions/scout
+ // POST: api/GameFormSubmissions/scout
+[HttpPost("scout")]
 public async Task<IActionResult> CreateScoutSubmission(
     ScoutSubmissionRequest request)
 {
