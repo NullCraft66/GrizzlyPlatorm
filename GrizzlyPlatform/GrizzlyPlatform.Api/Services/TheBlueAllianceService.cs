@@ -68,4 +68,34 @@ public class TheBlueAllianceService
 
         return document.RootElement.Clone();
     }
+public async Task<JsonElement> GetEventRankingsAsync(string eventKey)
+{
+    var apiKey = _configuration["TheBlueAlliance:ApiKey"];
+
+    if (string.IsNullOrWhiteSpace(apiKey))
+    {
+        throw new InvalidOperationException(
+            "The Blue Alliance API key is not configured.");
+    }
+
+    using var request = new HttpRequestMessage(
+        HttpMethod.Get,
+        $"event/{eventKey}/rankings");
+
+    request.Headers.Add("X-TBA-Auth-Key", apiKey);
+
+    var response = await _httpClient.SendAsync(request);
+
+    response.EnsureSuccessStatusCode();
+
+    var json = await response.Content.ReadAsStringAsync();
+
+    Console.WriteLine("========== TBA RANKINGS RESPONSE ==========");
+    Console.WriteLine(json);
+    Console.WriteLine("===========================================");
+
+    using var document = JsonDocument.Parse(json);
+
+    return document.RootElement.Clone();
+}
 }

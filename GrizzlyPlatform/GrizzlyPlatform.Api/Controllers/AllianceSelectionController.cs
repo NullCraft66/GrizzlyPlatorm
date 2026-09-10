@@ -565,33 +565,8 @@ public async Task<IActionResult> DeclineTeam(PickAllianceTeamRequest request)
 
     _context.AlliancePicks.Add(pick);
 
-    // A declined invitation still uses the current alliance's pick.
-    // Advance to the next alliance/round exactly like a normal pick.
-    if (selection.CurrentRound == 1)
-    {
-        if (selection.CurrentAlliance < 8)
-        {
-            selection.CurrentAlliance++;
-        }
-        else
-        {
-            selection.CurrentRound = 2;
-            selection.CurrentAlliance = 8;
-        }
-    }
-    else
-    {
-        if (selection.CurrentAlliance > 1)
-        {
-            selection.CurrentAlliance--;
-        }
-        else
-        {
-            selection.Status = "Completed";
-            selection.CompletedAt = DateTime.UtcNow;
-        }
-    }
-
+    // A declined invitation does not advance the alliance.
+    // The same captain may invite another eligible team.
     await _context.SaveChangesAsync();
 
     return Ok(new
@@ -629,6 +604,7 @@ public class PickAllianceTeamRequest
 
     public int TeamId { get; set; }
 }
+
 
 
 

@@ -29,7 +29,7 @@ public class GrizzlyDbContext : DbContext
     public DbSet<AllianceMember> AllianceMembers { get; set; }
     public DbSet<AlliancePick> AlliancePicks { get; set; }
     public DbSet<AllianceRankedTeam> AllianceRankedTeams { get; set; }
-
+    public DbSet<EventRanking> EventRankings { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -174,6 +174,33 @@ public class GrizzlyDbContext : DbContext
                 m.TeamId
             })
             .IsUnique();
+modelBuilder.Entity<EventRanking>()
+    .HasOne(r => r.Event)
+    .WithMany()
+    .HasForeignKey(r => r.EventId)
+    .OnDelete(DeleteBehavior.Cascade);
+
+modelBuilder.Entity<EventRanking>()
+    .HasOne(r => r.Team)
+    .WithMany()
+    .HasForeignKey(r => r.TeamId)
+    .OnDelete(DeleteBehavior.Restrict);
+
+modelBuilder.Entity<EventRanking>()
+    .HasIndex(r => new
+    {
+        r.EventId,
+        r.TeamId
+    })
+    .IsUnique();
+
+modelBuilder.Entity<EventRanking>()
+    .HasIndex(r => new
+    {
+        r.EventId,
+        r.Rank
+    })
+    .IsUnique();
     }
 }
 

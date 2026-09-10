@@ -446,132 +446,125 @@ foreach (var field in scoutingFields)
 }
 
     private async Task LoadAllianceSelection()
-    {
-        loading = true;
-
-        try
-        {
-            selection = null;
-
-            var response =
-                await Http.GetAsync(
-                    $"api/AllianceSelection/event/{selectedEventId}");
-
-            if (!response.IsSuccessStatusCode)
-            {
-                return;
-            }
-
-            var result =
-                await response.Content
-                    .ReadFromJsonAsync<AllianceSelectionResponse>();
-
-            if (result == null)
-            {
-                return;
-            }
-
-          if (result.Exists && result.Selection != null)
 {
-    selection = result.Selection;
-
-    topEight = selection.Alliances
-        .OrderBy(a => a.AllianceNumber)
-        .Select(a => new AllianceTeamModel
-        {
-            TeamId = a.CaptainTeamId,
-            TeamNumber = a.CaptainTeamNumber ?? 0,
-            TeamName = a.CaptainTeamName ?? "",
-            Rank = a.AllianceNumber
-        })
-        .ToList();
-
-    await LoadRankedTeams();
-}
-            else
-            {
-                await LoadRankedTeams();
-            }
-
-        }
-        finally
-        {
-            loading = false;
-        }
-    }
-
-private async Task LoadRankedTeams()
-{
-    var response = await Http.GetAsync(
-        $"api/EventTeams/event/{selectedEventId}");
-
-    if (!response.IsSuccessStatusCode)
-    {
-        topEight.Clear();
-        filteredTeams.Clear();
-        return;
-    }
-
-    var json = await response.Content.ReadAsStringAsync();
+    loading = true;
 
     try
     {
-        using var document = JsonDocument.Parse(json);
-        var root = document.RootElement;
+        selection = null;
 
-        JsonElement teamArray;
+        var response =
+            await Http.GetAsync(
+                $"api/AllianceSelection/event/{selectedEventId}");
 
-        if (root.ValueKind == JsonValueKind.Array)
+        if (!response.IsSuccessStatusCode)
         {
-            teamArray = root;
+            await LoadRankedTeams();
+            return;
         }
-        else if (root.ValueKind == JsonValueKind.Object &&
-                 root.TryGetProperty("value", out var value))
+
+        var result =
+            await response.Content
+                .ReadFromJsonAsync<AllianceSelectionResponse>();
+
+        if (result == null)
         {
-            teamArray = value;
+            await LoadRankedTeams();
+            return;
+        }
+
+        if (result.Exists && result.Selection != null)
+        {
+            selection = result.Selection;
+
+            topEight = selection.Alliances
+                .OrderBy(a => a.AllianceNumber)
+                .Select(a => new AllianceTeamModel
+                {
+                    TeamId = a.CaptainTeamId,
+                    TeamNumber = a.CaptainTeamNumber ?? 0,
+                    TeamName = a.CaptainTeamName ?? "",
+                    Rank = a.AllianceNumber
+                })
+                .ToList();
+
+            await LoadRankedTeams();
+
+            topEight = selection.Alliances
+                .OrderBy(a => a.AllianceNumber)
+                .Select(a => new AllianceTeamModel
+                {
+                    TeamId = a.CaptainTeamId,
+                    TeamNumber = a.CaptainTeamNumber ?? 0,
+                    TeamName = a.CaptainTeamName ?? "",
+                    Rank = a.AllianceNumber
+                })
+                .ToList();
         }
         else
+        {
+            await LoadRankedTeams();
+        }
+    }
+    finally
+    {
+        loading = false;
+    }
+}
+private async Task LoadRankedTeams()
+{
+    try
+    {
+        var response =
+            await Http.GetAsync(
+                $"api/EventRankings/event/{selectedEventId}");
+
+        if (!response.IsSuccessStatusCode)
         {
             topEight.Clear();
             filteredTeams.Clear();
             return;
         }
 
-        var teams =
-            JsonSerializer.Deserialize<List<EventTeamResponse>>(
-                teamArray.GetRawText(),
+        var json =
+            await response.Content.ReadAsStringAsync();
+
+        var wrapper =
+            JsonSerializer.Deserialize<EventRankingsResponse>(
+                json,
                 new JsonSerializerOptions
                 {
                     PropertyNameCaseInsensitive = true
-                })
-            ?? new List<EventTeamResponse>();
+                });
 
-        var convertedTeams = teams
-            .Where(t => t.Team != null)
-            .Select((t, index) => new AllianceTeamModel
+        var rankings =
+            wrapper?.Value
+            ?? new List<EventRankingResponse>();
+
+        filteredTeams = rankings
+            .OrderBy(r => r.Rank)
+            .Select(r => new AllianceTeamModel
             {
-                TeamId = t.Team!.Id,
-                TeamNumber = t.Team.TeamNumber,
-                TeamName = t.Team.Name,
-                Rank = index + 1
+                TeamId = r.TeamId,
+                TeamNumber = r.TeamNumber,
+                TeamName = r.TeamName,
+                Rank = r.Rank
             })
             .ToList();
 
-        filteredTeams = convertedTeams;
-
-        topEight = convertedTeams
+        topEight = filteredTeams
             .Take(8)
             .ToList();
     }
     catch (Exception ex)
     {
         Console.WriteLine(
-            $"FAILED TO PARSE EVENT TEAMS: {ex}");
+            $"FAILED TO LOAD EVENT RANKINGS: {ex}");
 
         topEight.Clear();
         filteredTeams.Clear();
     }
-} 
+}
 private IEnumerable<AllianceTeamModel> GetFilteredAndSortedTeams()
 {
     IEnumerable<AllianceTeamModel> result = filteredTeams;
@@ -692,21 +685,10 @@ private bool TeamMatchesScoutingFilter(
         }
     }
 
-    // Checkbox
-    if (field?.FieldType == 4)
-    {
-        return string.Equals(
-            answer.Value,
-            filterValue,
-            StringComparison.OrdinalIgnoreCase);
-    }
-
-    // Yes/No and Dropdown
-    return string.Equals(
-        answer.Value,
-        filterValue,
-        StringComparison.OrdinalIgnoreCase);
+    // No matching scouting value
+    return false;
 }
+
     private bool IsSelected(int teamId)
     {
         return selection?.Alliances
@@ -716,18 +698,26 @@ private bool TeamMatchesScoutingFilter(
 
     private async Task StartSelection()
     {
-        if (topEight.Count != 8)
+        if (topEight.Count != 8 || filteredTeams.Count == 0)
         {
             return;
         }
 
+        var rankedTeams = filteredTeams
+            .OrderBy(t => t.Rank)
+            .Select(t => t.TeamId)
+            .ToList();
+
         var request = new StartAllianceSelectionRequest
         {
             EventId = selectedEventId,
+
             TeamIds = topEight
                 .OrderBy(t => t.Rank)
                 .Select(t => t.TeamId)
-                .ToList()
+                .ToList(),
+
+            RankedTeamIds = rankedTeams
         };
 
         var response =
@@ -741,9 +731,11 @@ private bool TeamMatchesScoutingFilter(
         }
         else
         {
-            var message = await response.Content.ReadAsStringAsync();
+            var message =
+                await response.Content.ReadAsStringAsync();
 
-            Console.WriteLine(message);
+            Console.WriteLine(
+                $"ALLIANCE START FAILED: {message}");
         }
     }
 
@@ -899,6 +891,7 @@ private class ScoutingAnswerModel
     {
         public int EventId { get; set; }
         public List<int> TeamIds { get; set; } = new();
+        public List<int> RankedTeamIds { get; set; } = new();
     }
 
     private class PickAllianceTeamRequest
@@ -907,5 +900,35 @@ private class ScoutingAnswerModel
         public int AllianceNumber { get; set; }
         public int TeamId { get; set; }
     }
+    
+    private class EventRankingResponse
+    {
+        public int Id { get; set; }
+private class EventRankingsResponse
+{
+    public List<EventRankingResponse> Value { get; set; } = new();
+    public int Count { get; set; }
 }
+        public int EventId { get; set; }
+        public int TeamId { get; set; }
+        public int TeamNumber { get; set; }
+        public string TeamName { get; set; } = "";
+        public int Rank { get; set; }
+        public int RankingPoints { get; set; }
+        public double? TieBreaker1 { get; set; }
+        public double? TieBreaker2 { get; set; }
+    }
+private class EventRankingsResponse
+{
+    public List<EventRankingResponse> Value { get; set; } = new();
+    public int Count { get; set; }
+}
+}
+
+
+
+
+
+
+
 
