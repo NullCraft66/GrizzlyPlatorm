@@ -7,5 +7,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../GrizzlyPlatform.Api/GrizzlyPlatform.Api.csproj" />
+    <ProjectReference Include="../GrizzlyPlatform.Web/GrizzlyPlatform.Web.csproj" />
   </ItemGroup>
 </Project>

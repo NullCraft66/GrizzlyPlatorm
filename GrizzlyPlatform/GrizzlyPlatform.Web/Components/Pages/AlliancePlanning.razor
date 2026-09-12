@@ -1,0 +1,28 @@
+@page "/allianceplan"
+@using GrizzlyPlatform.Web.Models
+@using GrizzlyPlatform.Web.Components.Shared
+@inject HttpClient Http
+<PageTitle>Alliance Plan</PageTitle>
+<h1>Alliance Plan</h1>
+<p>Host planning and device suggestions for each event.</p>
+@if (error != null) { <p class="alert alert-danger" role="alert">@error</p> }
+<label for="planning-event" class="form-label">Event</label>
+<select id="planning-event" class="form-select" @bind="eventId" disabled="@dirty">
+    <option value="0">Select an event</option>
+    @foreach (var item in events) { <option value="@item.Id">@item.Name</option> }
+</select>
+@if (eventId > 0)
+{
+    <AlliancePlanBoard @key="eventId" EventId="eventId" DirtyChanged="value => dirty = value" />
+}
+@code {
+    private List<EventModel> events = new();
+    private int eventId;
+    private bool dirty;
+    private string? error;
+    protected override async Task OnInitializedAsync()
+    {
+        try { events = await Http.GetFromJsonAsync<List<EventModel>>("api/Events") ?? new(); }
+        catch (Exception ex) { error = $"Could not load events: {ex.Message}"; }
+    }
+}

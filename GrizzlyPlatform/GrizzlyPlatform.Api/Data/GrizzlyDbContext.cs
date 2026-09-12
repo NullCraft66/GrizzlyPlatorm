@@ -10,6 +10,9 @@ public class GrizzlyDbContext : DbContext
     {
     }
 
+    public DbSet<AlliancePlan> AlliancePlans { get; set; }
+    public DbSet<AlliancePlanEntry> AlliancePlanEntries { get; set; }
+    public DbSet<AlliancePlanSuggestion> AlliancePlanSuggestions { get; set; }
     public DbSet<Team> Teams { get; set; }
     public DbSet<User> Users { get; set; }
     public DbSet<Season> Seasons { get; set; }
@@ -34,6 +37,19 @@ public class GrizzlyDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.Entity<AlliancePlan>().HasKey(p => p.EventId);
+        modelBuilder.Entity<AlliancePlan>().HasOne<Event>().WithMany()
+            .HasForeignKey(p => p.EventId).OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<AlliancePlan>().HasMany(p => p.Wishlist).WithOne()
+            .HasForeignKey(e => e.EventId).OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<AlliancePlanEntry>().HasKey(e => new { e.EventId, e.TeamId });
+        modelBuilder.Entity<AlliancePlanEntry>().HasOne<Team>().WithMany()
+            .HasForeignKey(e => e.TeamId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<AlliancePlanSuggestion>().HasOne<Event>().WithMany()
+            .HasForeignKey(s => s.EventId).OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<AlliancePlanSuggestion>().HasOne<Team>().WithMany()
+            .HasForeignKey(s => s.TeamId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<AlliancePlanSuggestion>().HasIndex(s => new { s.EventId, s.CreatedAt });
 
         modelBuilder.Entity<Match>()
             .HasIndex(m => new

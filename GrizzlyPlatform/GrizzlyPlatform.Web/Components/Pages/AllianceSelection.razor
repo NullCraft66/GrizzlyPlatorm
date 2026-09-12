@@ -1,4 +1,5 @@
 @using System.Text.Json
+@using GrizzlyPlatform.Web.Components.Shared
 @page "/allianceselection"
 @rendermode InteractiveServer
 @using GrizzlyPlatform.Web.Models
@@ -6,6 +7,18 @@
 <PageTitle>Alliance Selection</PageTitle>
 
 <h1>Alliance Selection</h1>
+@if (errorMessage != null)
+{
+    <div class="alert alert-danger" role="alert">@errorMessage</div>
+}
+<button class="btn btn-secondary mb-3" disabled="@(loading || saving || planDirty)" @onclick="Reload">Refresh</button>
+@if (selection?.Status == "InProgress")
+{
+    <div class="alert alert-info" role="status">
+        Round @selection.CurrentRound: Alliance @selection.CurrentAlliance is inviting.
+        Record whether the invited team accepted or declined.
+    </div>
+}
 
 <div class="alliance-selection-page">
 
@@ -13,7 +26,7 @@
         <div>
             <h2>Event</h2>
 
-            <select @bind="selectedEventId"
+            <select disabled="@(loading || saving || planDirty)" @bind="selectedEventId"
                     @bind:after="EventChanged">
                 <option value="0">Select an event</option>
 
@@ -48,6 +61,7 @@
     }
     else
     {
+        <AlliancePlanBoard @key="selectedEventId" EventId="selectedEventId" @ref="planBoard" DirtyChanged="value => planDirty = value" />
         <section class="top-eight-section">
             <div class="section-header">
                 <div>
@@ -62,7 +76,7 @@
                 {
                     <button type="button"
                             @onclick="StartSelection"
-                            disabled="@(topEight.Count != 8)">
+                            disabled="@(topEight.Count != 8 || saving || loadFailed)">
                         Start Alliance Selection
                     </button>
                 }
@@ -105,6 +119,17 @@
                 </div>
             </div>
 
+            <div class="filter-group mb-3">
+                <label for="pit-filter-form">Pit form used for filters</label>
+                <select id="pit-filter-form" disabled="@(loading || saving || planDirty)" @bind="selectedPitFormId" @bind:after="SetScoutingFields">
+                    <option value="0">No pit form</option>
+                    @foreach (var form in pitForms)
+                    {
+                        <option value="@form.Id">@form.Name</option>
+                    }
+                </select>
+                <p>Only submissions from this event and the selected form are used.</p>
+            </div>
             <div class="filters">
 
                 <div class="filter-group">
@@ -129,8 +154,8 @@
     <label>Order</label>
 
     <select @bind="sortOrder">
-        <option value="Best">Best → Worst</option>
-        <option value="Worst">Worst → Best</option>
+        <option value="Best">Ascending</option>
+        <option value="Worst">Descending</option>
     </select>
 </div>
 @foreach (var field in scoutingFields)
@@ -197,7 +222,7 @@ else if (field.FieldType == 1)
 
             </div>
 
-            @if (filteredTeams.Count == 0)
+            @if (!GetFilteredAndSortedTeams().Any())
             {
                 <div class="empty-state">
                     <p>No teams match the current filters.</p>
@@ -221,24 +246,23 @@ else if (field.FieldType == 1)
                             </div>
 
                             <div class="team-actions">
+                                <button type="button" disabled="@(planBoard?.IsLoaded != true)" @onclick="() => planBoard!.AddTeam(team.TeamId)">Add to wishlist</button>
                                 @if (IsCaptain(team.TeamId))
                                 {
-                                    <span class="team-badge captain">
-                                        Captain
-                                    </span>
+                                    <span class="team-badge captain">Captain</span>
                                 }
-                                else if (IsSelected(team.TeamId))
+                                @if (IsSelected(team.TeamId))
                                 {
-                                    <span class="team-badge selected">
-                                        Selected
-                                    </span>
+                                    <span class="team-badge selected">Selected</span>
                                 }
-                                else
+                                @if (HasDeclined(team.TeamId))
                                 {
-                                    <button type="button"
-                                            @onclick="() => SelectTeam(team)">
-                                        Select
-                                    </button>
+                                    <span class="team-badge">Declined</span>
+                                }
+                                @if (CanInvite(team.TeamId))
+                                {
+                                    <button type="button" disabled="@saving" @onclick="() => RecordInvitation(team, false)">Record acceptance</button>
+                                    <button type="button" disabled="@saving" @onclick="() => RecordInvitation(team, true)">Record decline</button>
                                 }
                             </div>
 
@@ -252,6 +276,18 @@ else if (field.FieldType == 1)
 
         @if (selection != null)
         {
+            @if (selection.Picks.Count > 0)
+            {
+                <details class="mb-3">
+                    <summary>Invitation history (@selection.Picks.Count)</summary>
+                    <ol>
+                        @foreach (var pick in selection.Picks.OrderBy(p => p.PickOrder))
+                        {
+                            <li>Round @pick.Round, Alliance @pick.AllianceNumber invited @pick.InvitedTeamNumber: @pick.Result</li>
+                        }
+                    </ol>
+                </details>
+            }
             <section class="alliances-section">
 
                 <div class="section-header">
@@ -324,460 +360,199 @@ else if (field.FieldType == 1)
 </div>
 
 @code {
-
     private List<EventModel> events = new();
-
     private List<AllianceTeamModel> topEight = new();
-
     private List<AllianceTeamModel> filteredTeams = new();
-
     private AllianceSelectionModel? selection;
-
     private int selectedEventId;
-
     private string searchText = "";
+    private string sortOption = "Rank";
+    private string sortOrder = "Best";
+    private bool loading;
+    private bool planDirty;
+    private AlliancePlanBoard? planBoard;
+    private bool saving;
+    private bool loadFailed;
+    private string? errorMessage;
+    private List<GameFormModel> pitForms = new();
+    private int selectedPitFormId;
+    private List<ScoutingFieldModel> scoutingFields = new();
+    private List<ScoutingSubmissionModel> scoutingSubmissions = new();
+    private Dictionary<int, string> scoutingFilters = new();
 
-  private string sortOption = "Rank";
+    protected override async Task OnInitializedAsync() => await Reload();
 
-private string sortOrder = "Best";
-
-private bool loading;
-
-private List<ScoutingFieldModel> scoutingFields = new();
-private List<ScoutingSubmissionModel> scoutingSubmissions = new();
-private Dictionary<int, string> scoutingFilters = new();
-
-    private async Task LoadEvents()
+    private async Task Reload()
     {
-        events = await Http.GetFromJsonAsync<List<EventModel>>(
-            "api/Events") ?? new List<EventModel>();
+        if (saving || loading) return;
+        loading = true;
+        errorMessage = null;
+        try { events = await Http.GetFromJsonAsync<List<EventModel>>("api/Events") ?? new(); }
+        catch (Exception ex) { errorMessage = $"Could not load events: {ex.Message}"; }
+        finally { loading = false; }
+        if (errorMessage == null) await EventChanged();
     }
 
-   private async Task EventChanged()
-{
-    if (selectedEventId <= 0)
+    private async Task EventChanged()
     {
+        loading = true;
+        loadFailed = false;
+        errorMessage = null;
         topEight.Clear();
         filteredTeams.Clear();
+        pitForms.Clear();
         scoutingFields.Clear();
         scoutingSubmissions.Clear();
         scoutingFilters.Clear();
+        selectedPitFormId = 0;
         selection = null;
-        return;
-    }
-
-    await LoadAllianceSelection();
-    await LoadScoutingData();
-}
-
-private async Task LoadScoutingData(){
-    scoutingFields.Clear();
-    scoutingSubmissions.Clear();
-    scoutingFilters.Clear();
-
-    try
-    {
-        var forms =
-            await Http.GetFromJsonAsync<List<GameFormModel>>(
-                "api/GameForms");
-
-       var selectedEvent =
-    events.FirstOrDefault(e => e.Id == selectedEventId);
-
-if (selectedEvent == null)
-{
-    return;
-}
-
-var pitForm = forms?
-    .Where(f =>
-        f.FormType == 0 &&
-        f.SeasonId == selectedEvent.SeasonId)
-    .OrderByDescending(f => f.Id)
-    .FirstOrDefault();
-
-        if (pitForm == null)
-        {
-            return;
-        }
-
-        scoutingFields = pitForm.Fields
-            .Where(f =>
-                !f.IsSystemField &&
-                f.FieldType >= 1 &&
-                f.FieldType <= 5)
-            .OrderBy(f => f.DisplayOrder)
-            .Select(f => new ScoutingFieldModel
-            {
-                Id = f.Id,
-                Question = f.Question,
-                FieldType = f.FieldType,
-                Options = f.Options?
-                    .Select(o => new ScoutingOptionModel
-                    {
-                        Id = o.Id,
-                        Value = o.Value
-                    })
-                    .ToList() ?? new List<ScoutingOptionModel>()
-            })
-            .ToList();
-
-scoutingSubmissions =
-    await Http.GetFromJsonAsync<List<ScoutingSubmissionModel>>(
-        $"api/GameFormSubmissions?formType=Pit",
-        new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        })
-    ?? new List<ScoutingSubmissionModel>();
-
-foreach (var field in scoutingFields)
-{
-    scoutingFilters[field.Id] = "";
-}
-    }
-  catch (Exception ex)
-{
-    Console.WriteLine(
-        $"FAILED TO LOAD SCOUTING DATA: {ex}");
-
-    await InvokeAsync(StateHasChanged);
-}
-}
-
-    private async Task LoadAllianceSelection()
-{
-    loading = true;
-
-    try
-    {
-        selection = null;
-
-        var response =
-            await Http.GetAsync(
-                $"api/AllianceSelection/event/{selectedEventId}");
-
-        if (!response.IsSuccessStatusCode)
-        {
-            await LoadRankedTeams();
-            return;
-        }
-
-        var result =
-            await response.Content
-                .ReadFromJsonAsync<AllianceSelectionResponse>();
-
-        if (result == null)
-        {
-            await LoadRankedTeams();
-            return;
-        }
-
-        if (result.Exists && result.Selection != null)
-        {
-            selection = result.Selection;
-
-            topEight = selection.Alliances
-                .OrderBy(a => a.AllianceNumber)
-                .Select(a => new AllianceTeamModel
-                {
-                    TeamId = a.CaptainTeamId,
-                    TeamNumber = a.CaptainTeamNumber ?? 0,
-                    TeamName = a.CaptainTeamName ?? "",
-                    Rank = a.AllianceNumber
-                })
-                .ToList();
-
-            await LoadRankedTeams();
-
-            topEight = selection.Alliances
-                .OrderBy(a => a.AllianceNumber)
-                .Select(a => new AllianceTeamModel
-                {
-                    TeamId = a.CaptainTeamId,
-                    TeamNumber = a.CaptainTeamNumber ?? 0,
-                    TeamName = a.CaptainTeamName ?? "",
-                    Rank = a.AllianceNumber
-                })
-                .ToList();
-        }
-        else
-        {
-            await LoadRankedTeams();
-        }
-    }
-    finally
-    {
-        loading = false;
-    }
-}
-private async Task LoadRankedTeams()
-{
-    try
-    {
-        var response =
-            await Http.GetAsync(
-                $"api/EventRankings/event/{selectedEventId}");
-
-        if (!response.IsSuccessStatusCode)
-        {
-            topEight.Clear();
-            filteredTeams.Clear();
-            return;
-        }
-
-        var json =
-            await response.Content.ReadAsStringAsync();
-
-        var wrapper =
-            JsonSerializer.Deserialize<EventRankingsResponse>(
-                json,
-                new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                });
-
-        var rankings =
-            wrapper?.Value
-            ?? new List<EventRankingResponse>();
-
-        filteredTeams = rankings
-            .OrderBy(r => r.Rank)
-            .Select(r => new AllianceTeamModel
-            {
-                TeamId = r.TeamId,
-                TeamNumber = r.TeamNumber,
-                TeamName = r.TeamName,
-                Rank = r.Rank
-            })
-            .ToList();
-
-        if (selection == null)
-        {
-            topEight = filteredTeams
-                .Take(8)
-                .ToList();
-        }
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine(
-            $"FAILED TO LOAD EVENT RANKINGS: {ex}");
-
-        topEight.Clear();
-        filteredTeams.Clear();
-    }
-}
-private IEnumerable<AllianceTeamModel> GetFilteredAndSortedTeams()
-{
-    IEnumerable<AllianceTeamModel> result = filteredTeams;
-
-    // Search
-    if (!string.IsNullOrWhiteSpace(searchText))
-    {
-        result = result.Where(t =>
-            t.TeamNumber
-                .ToString()
-                .Contains(
-                    searchText,
-                    StringComparison.OrdinalIgnoreCase)
-            ||
-            t.TeamName.Contains(
-                searchText,
-                StringComparison.OrdinalIgnoreCase));
-    }
-
-    // Dynamic scouting filters
-    foreach (var filter in scoutingFilters)
-    {
-        if (string.IsNullOrWhiteSpace(filter.Value))
-        {
-            continue;
-        }
-
-        var fieldId = filter.Key;
-        var filterValue = filter.Value;
-
-        result = result.Where(team =>
-            TeamMatchesScoutingFilter(
-                team.TeamId,
-                fieldId,
-                filterValue));
-    }
-
-    // Sorting
-    result = sortOption switch
-    {
-        "TeamNumber" =>
-            result.OrderBy(t => t.TeamNumber),
-
-        "TeamName" =>
-            result.OrderBy(t => t.TeamName),
-
-        _ =>
-            result.OrderBy(t => t.Rank)
-    };
-
-    if (sortOrder == "Worst")
-    {
-        result = result.Reverse();
-    }
-
-    return result;
-}
-
-private bool TeamMatchesScoutingFilter(
-    int teamId,
-    int fieldId,
-    string filterValue)
-{
-    var submission = scoutingSubmissions
-        .Where(s => s.TeamId == teamId)
-        .OrderByDescending(s => s.SubmittedAt)
-        .FirstOrDefault();
-
-    if (submission == null)
-    {
-        return false;
-    }
-
-    var answer = submission.Answers
-        .FirstOrDefault(a => a.FieldId == fieldId);
-
-    if (answer == null)
-    {
-        return false;
-    }
-
-    // Number fields = minimum value
-    var field = scoutingFields
-        .FirstOrDefault(f => f.Id == fieldId);
-
-    if (field?.FieldType == 1)
-    {
-        if (int.TryParse(answer.Value, out var actualValue) &&
-            int.TryParse(filterValue, out var minimumValue))
-        {
-            return actualValue >= minimumValue;
-        }
-
-        return false;
-    }
-
-    // Multi-select values may be stored as JSON:
-    // ["hii","sample"]
-    if (field?.FieldType == 5)
-    {
         try
         {
-            var values =
-                JsonSerializer.Deserialize<List<string>>(answer.Value);
-
-            if (values != null)
-            {
-                return values.Any(v =>
-                    string.Equals(
-                        v,
-                        filterValue,
-                        StringComparison.OrdinalIgnoreCase));
-            }
+            if (selectedEventId <= 0) return;
+            await LoadAllianceSelection();
+            await LoadScoutingData();
         }
-        catch
+        catch (Exception ex)
         {
-            // Fall through to normal comparison.
+            loadFailed = true;
+            errorMessage = $"Could not load alliance selection: {ex.Message}";
         }
+        finally { loading = false; }
     }
 
-    // No matching scouting value
-    return false;
-}
-
-    private bool IsSelected(int teamId)
+    private async Task LoadAllianceSelection()
     {
-        return selection?.Alliances
-            .SelectMany(a => a.Members)
-            .Any(m => m.TeamId == teamId) == true;
+        var result = await Http.GetFromJsonAsync<AllianceSelectionResponse>(
+            $"api/AllianceSelection/event/{selectedEventId}");
+        selection = result?.Exists == true ? result.Selection : null;
+        var rankings = await Http.GetFromJsonAsync<List<EventRankingResponse>>(
+            $"api/EventRankings/event/{selectedEventId}") ?? new();
+        filteredTeams = rankings.OrderBy(r => r.Rank).Select(r => new AllianceTeamModel
+        {
+            TeamId = r.TeamId, TeamNumber = r.TeamNumber, TeamName = r.TeamName, Rank = r.Rank
+        }).ToList();
+        topEight = selection == null
+            ? filteredTeams.Take(8).ToList()
+            : selection.Alliances.OrderBy(a => a.AllianceNumber).Select(a => new AllianceTeamModel
+            {
+                TeamId = a.CaptainTeamId, TeamNumber = a.CaptainTeamNumber ?? 0,
+                TeamName = a.CaptainTeamName ?? "", Rank = a.AllianceNumber
+            }).ToList();
+    }
+
+    private async Task LoadScoutingData()
+    {
+        var eventItem = events.First(e => e.Id == selectedEventId);
+        var forms = await Http.GetFromJsonAsync<List<GameFormModel>>("api/GameForms") ?? new();
+        pitForms = forms.Where(f => f.FormType == 0 && f.SeasonId == eventItem.SeasonId)
+            .OrderByDescending(f => f.Id).ToList();
+        scoutingSubmissions = await Http.GetFromJsonAsync<List<ScoutingSubmissionModel>>(
+            $"api/GameFormSubmissions/event/{selectedEventId}") ?? new();
+        var active = await Http.GetFromJsonAsync<ActiveConfiguration>("api/ActiveScoutingConfiguration");
+        selectedPitFormId = pitForms.FirstOrDefault(f => f.Id == active?.ActivePitFormId)?.Id
+            ?? pitForms.FirstOrDefault(f => scoutingSubmissions.Any(s =>
+                s.EventId == selectedEventId && s.GameFormId == f.Id))?.Id
+            ?? pitForms.FirstOrDefault()?.Id ?? 0;
+        SetScoutingFields();
+    }
+
+    private void SetScoutingFields()
+    {
+        scoutingFilters.Clear();
+        scoutingFields = pitForms.FirstOrDefault(f => f.Id == selectedPitFormId)?.Fields
+            .Where(f => !f.IsSystemField && f.FieldType >= 1 && f.FieldType <= 5)
+            .OrderBy(f => f.DisplayOrder).Select(f => new ScoutingFieldModel
+            {
+                Id = f.Id, Question = f.Question, FieldType = f.FieldType,
+                Options = f.Options.Select(o => new ScoutingOptionModel { Id = o.Id, Value = o.Value }).ToList()
+            }).ToList() ?? new();
+        foreach (var field in scoutingFields) scoutingFilters[field.Id] = "";
+    }
+
+    private IEnumerable<AllianceTeamModel> GetFilteredAndSortedTeams()
+    {
+        IEnumerable<AllianceTeamModel> result = filteredTeams;
+        if (!string.IsNullOrWhiteSpace(searchText))
+            result = result.Where(t => t.TeamNumber.ToString().Contains(searchText.Trim()) ||
+                t.TeamName.Contains(searchText.Trim(), StringComparison.OrdinalIgnoreCase));
+        foreach (var filter in scoutingFilters.Where(f => !string.IsNullOrWhiteSpace(f.Value)))
+            result = result.Where(t => TeamMatchesScoutingFilter(t.TeamId, filter.Key, filter.Value));
+        result = sortOption switch
+        {
+            "TeamNumber" => result.OrderBy(t => t.TeamNumber),
+            "TeamName" => result.OrderBy(t => t.TeamName),
+            _ => result.OrderBy(t => t.Rank)
+        };
+        return sortOrder == "Worst" ? result.Reverse() : result;
+    }
+
+    private bool TeamMatchesScoutingFilter(int teamId, int fieldId, string value)
+    {
+        var submission = scoutingSubmissions
+            .Where(s => s.TeamId == teamId && s.EventId == selectedEventId && s.GameFormId == selectedPitFormId)
+            .OrderByDescending(s => s.SubmittedAt).ThenByDescending(s => s.Id).FirstOrDefault();
+        var answer = submission?.Answers.FirstOrDefault(a => a.FieldId == fieldId);
+        var field = scoutingFields.First(f => f.Id == fieldId);
+        return GrizzlyPlatform.Web.Services.ScoutingAnswerFilter.Matches(field.FieldType, answer?.Value, value);
+    }
+
+    private bool IsSelected(int teamId) =>
+        selection?.Alliances.SelectMany(a => a.Members).Any(m => m.TeamId == teamId) == true;
+    private bool HasDeclined(int teamId) =>
+        selection?.Picks.Any(p => p.InvitedTeamId == teamId && p.Result == "Declined") == true;
+    private bool CanInvite(int teamId)
+    {
+        if (loadFailed || selection?.Status != "InProgress" || IsSelected(teamId) || HasDeclined(teamId))
+            return false;
+        var captain = selection.Alliances.FirstOrDefault(a => a.CaptainTeamId == teamId);
+        return captain == null || (selection.CurrentRound == 1 &&
+            captain.AllianceNumber > selection.CurrentAlliance && captain.Members.Count == 0);
     }
 
     private async Task StartSelection()
     {
-        if (topEight.Count != 8 || filteredTeams.Count == 0)
-        {
-            return;
-        }
-
-        var rankedTeams = filteredTeams
-            .OrderBy(t => t.Rank)
-            .Select(t => t.TeamId)
-            .ToList();
-
-        var request = new StartAllianceSelectionRequest
+        if (saving || loadFailed || topEight.Count != 8 || selection != null) return;
+        await SaveAction("start", new StartAllianceSelectionRequest
         {
             EventId = selectedEventId,
-
-            TeamIds = topEight
-                .OrderBy(t => t.Rank)
-                .Select(t => t.TeamId)
-                .ToList(),
-
-            RankedTeamIds = rankedTeams
-        };
-
-        var response =
-            await Http.PostAsJsonAsync(
-                "api/AllianceSelection/start",
-                request);
-
-        if (response.IsSuccessStatusCode)
-        {
-            await LoadAllianceSelection();
-        }
-        else
-        {
-            var message =
-                await response.Content.ReadAsStringAsync();
-
-            Console.WriteLine(
-                $"ALLIANCE START FAILED: {message}");
-        }
+            TeamIds = topEight.OrderBy(t => t.Rank).Select(t => t.TeamId).ToList(),
+            RankedTeamIds = filteredTeams.OrderBy(t => t.Rank).Select(t => t.TeamId).ToList()
+        });
     }
 
-    private async Task SelectTeam(AllianceTeamModel team)
+    private async Task RecordInvitation(AllianceTeamModel team, bool declined)
     {
-        if (selection == null)
+        if (saving || !CanInvite(team.TeamId) || selection == null) return;
+        await SaveAction(declined ? "decline" : "pick", new PickAllianceTeamRequest
         {
-            return;
-        }
-
-        var request = new PickAllianceTeamRequest
-        {
-            AllianceSelectionId = selection.Id,
-            AllianceNumber = selection.CurrentAlliance,
+            AllianceSelectionId = selection.Id, AllianceNumber = selection.CurrentAlliance,
+            ExpectedRound = selection.CurrentRound, ExpectedPickCount = selection.Picks.Count,
             TeamId = team.TeamId
-        };
+        });
+    }
 
-        var response =
-            await Http.PostAsJsonAsync(
-                "api/AllianceSelection/pick",
-                request);
-
-        if (response.IsSuccessStatusCode)
+    private async Task SaveAction<T>(string action, T request)
+    {
+        saving = true;
+        errorMessage = null;
+        try
         {
+            using var response = await Http.PostAsJsonAsync($"api/AllianceSelection/{action}", request);
+            if (!response.IsSuccessStatusCode)
+            {
+                errorMessage = await response.Content.ReadAsStringAsync();
+                await LoadAllianceSelection();
+                return;
+            }
             await LoadAllianceSelection();
         }
-        else
+        catch (Exception ex)
         {
-            var message = await response.Content.ReadAsStringAsync();
-
-            Console.WriteLine(message);
+            loadFailed = true;
+            errorMessage = $"Could not finish the action. Refresh to check the saved draft before trying again. {ex.Message}";
         }
+        finally { saving = false; }
     }
-
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadEvents();
-    }
-
     private class AllianceTeamModel
     {
         public int TeamId { get; set; }
@@ -805,8 +580,22 @@ private bool TeamMatchesScoutingFilter(
         public int CurrentRound { get; set; }
         public int CurrentAlliance { get; set; }
         public List<AllianceModel> Alliances { get; set; } = new();
+        public List<AlliancePickModel> Picks { get; set; } = new();
     }
 
+    private class AlliancePickModel
+    {
+        public int PickOrder { get; set; }
+        public int Round { get; set; }
+        public int AllianceNumber { get; set; }
+        public int InvitedTeamId { get; set; }
+        public int? InvitedTeamNumber { get; set; }
+        public string Result { get; set; } = "";
+    }
+    private class ActiveConfiguration
+    {
+        public int? ActivePitFormId { get; set; }
+    }
     private class AllianceModel
     {
         public int Id { get; set; }
@@ -900,6 +689,8 @@ private class ScoutingAnswerModel
     private class PickAllianceTeamRequest
     {
         public int AllianceSelectionId { get; set; }
+        public int ExpectedRound { get; set; }
+        public int ExpectedPickCount { get; set; }
         public int AllianceNumber { get; set; }
         public int TeamId { get; set; }
     }

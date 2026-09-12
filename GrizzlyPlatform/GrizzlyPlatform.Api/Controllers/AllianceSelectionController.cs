@@ -137,6 +137,7 @@ public class AllianceSelectionController : ControllerBase
     public async Task<IActionResult> StartSelection(
         StartAllianceSelectionRequest request)
     {
+        await using var transaction = await _context.Database.BeginTransactionAsync();
         var eventEntity = await _context.Events
             .FirstOrDefaultAsync(e => e.Id == request.EventId);
 
@@ -190,6 +191,14 @@ public class AllianceSelectionController : ControllerBase
                 "The first 8 ranked teams must be the alliance captains.");
         }
 
+        var eventRankedIds = await _context.EventRankings
+            .Where(r => r.EventId == request.EventId)
+            .OrderBy(r => r.Rank).Select(r => r.TeamId).ToListAsync();
+        if (!request.RankedTeamIds.SequenceEqual(eventRankedIds))
+        {
+            return BadRequest("Rankings changed or contain teams from another event. Refresh before starting.");
+        }
+
         var selection = new AllianceSelection
         {
             EventId = request.EventId,
@@ -227,6 +236,7 @@ public class AllianceSelectionController : ControllerBase
 
         await _context.SaveChangesAsync();
 
+        await transaction.CommitAsync();
         return CreatedAtAction(
             nameof(GetForEvent),
             new { eventId = request.EventId },
@@ -244,6 +254,7 @@ public class AllianceSelectionController : ControllerBase
 [HttpPost("pick")]
 public async Task<IActionResult> PickTeam(PickAllianceTeamRequest request)
 {
+    await using var transaction = await _context.Database.BeginTransactionAsync();
     var selection = await _context.AllianceSelections
         .Include(s => s.Alliances)
             .ThenInclude(a => a.Members)
@@ -287,6 +298,24 @@ public async Task<IActionResult> PickTeam(PickAllianceTeamRequest request)
         return BadRequest("The current alliance does not exist.");
     }
 
+    if ((request.ExpectedRound.HasValue && request.ExpectedRound != selection.CurrentRound) ||
+        (request.ExpectedPickCount.HasValue && request.ExpectedPickCount != selection.Picks.Count))
+    {
+        return Conflict("The draft has changed. Refresh before recording another invitation.");
+    }
+
+    if (!selection.RankedTeams.Any(r => r.TeamId == request.TeamId))
+    {
+        return BadRequest("This team is not in the event's saved ranked team list.");
+    }
+
+    var invitedCaptain = selection.Alliances.FirstOrDefault(a => a.CaptainTeamId == request.TeamId);
+    if (invitedCaptain != null &&
+        (selection.CurrentRound != 1 || invitedCaptain.AllianceNumber <= selection.CurrentAlliance ||
+         invitedCaptain.Members.Count > 0))
+    {
+        return BadRequest("Only a later captain without selected members can be invited in round one.");
+    }
     var team = await _context.Teams
         .FirstOrDefaultAsync(t => t.Id == request.TeamId);
 
@@ -332,6 +361,19 @@ if (alreadyDeclined)
 
     var selectionOrder = existingMemberCount + 1;
 
+    AllianceRankedTeam? replacementCaptain = null;
+    if (isCaptain)
+    {
+        var unavailableIds = selection.Alliances.Select(a => a.CaptainTeamId)
+            .Concat(selection.Alliances.SelectMany(a => a.Members).Select(m => m.TeamId))
+            .Append(team.Id).ToHashSet();
+        replacementCaptain = selection.RankedTeams.OrderBy(r => r.Rank)
+            .FirstOrDefault(r => !unavailableIds.Contains(r.TeamId));
+        if (replacementCaptain == null)
+            return BadRequest("No eligible team is available to become the new Alliance 8 captain.");
+        if (!selection.Alliances.Any(a => a.AllianceNumber == 8))
+            return BadRequest("Alliance 8 does not exist.");
+    }
     // Add the selected team to the inviting alliance.
     var member = new AllianceMember
     {
@@ -385,39 +427,8 @@ if (alreadyDeclined)
             }
         }
 
-        // Find the highest-ranked team that has not already been
-        // selected and is not currently an alliance captain.
-        var currentCaptainIds = selection.Alliances
-            .Select(a => a.CaptainTeamId)
-            .ToHashSet();
-
-      var selectedTeamIds = selection.Alliances
-    .SelectMany(a => a.Members)
-    .Select(m => m.TeamId)
-    .Append(team.Id)
-    .ToHashSet();
-
-        var replacementCaptain = selection.RankedTeams
-            .OrderBy(r => r.Rank)
-            .FirstOrDefault(r =>
-                !currentCaptainIds.Contains(r.TeamId) &&
-                !selectedTeamIds.Contains(r.TeamId));
-
-        if (replacementCaptain == null)
-        {
-            return BadRequest(
-                "No eligible team is available to become the new Alliance 8 captain.");
-        }
-
-        var allianceEight = selection.Alliances
-            .FirstOrDefault(a => a.AllianceNumber == 8);
-
-        if (allianceEight == null)
-        {
-            return BadRequest("Alliance 8 does not exist.");
-        }
-
-        allianceEight.CaptainTeamId = replacementCaptain.TeamId;
+        var allianceEight = selection.Alliances.Single(a => a.AllianceNumber == 8);
+        allianceEight.CaptainTeamId = replacementCaptain!.TeamId;
     }
 
     // Advance the state machine after the pick.
@@ -452,6 +463,7 @@ if (alreadyDeclined)
     }
 
     await _context.SaveChangesAsync();
+    await transaction.CommitAsync();
 
     return Ok(new
     {
@@ -470,10 +482,12 @@ if (alreadyDeclined)
 [HttpPost("decline")]
 public async Task<IActionResult> DeclineTeam(PickAllianceTeamRequest request)
 {
+    await using var transaction = await _context.Database.BeginTransactionAsync();
     var selection = await _context.AllianceSelections
         .Include(s => s.Alliances)
             .ThenInclude(a => a.Members)
         .Include(s => s.Picks)
+        .Include(s => s.RankedTeams)
         .FirstOrDefaultAsync(s => s.Id == request.AllianceSelectionId);
 
     if (selection == null)
@@ -510,6 +524,24 @@ public async Task<IActionResult> DeclineTeam(PickAllianceTeamRequest request)
         return BadRequest("The current alliance does not exist.");
     }
 
+    if ((request.ExpectedRound.HasValue && request.ExpectedRound != selection.CurrentRound) ||
+        (request.ExpectedPickCount.HasValue && request.ExpectedPickCount != selection.Picks.Count))
+    {
+        return Conflict("The draft has changed. Refresh before recording another invitation.");
+    }
+
+    if (!selection.RankedTeams.Any(r => r.TeamId == request.TeamId))
+    {
+        return BadRequest("This team is not in the event's saved ranked team list.");
+    }
+
+    var invitedCaptain = selection.Alliances.FirstOrDefault(a => a.CaptainTeamId == request.TeamId);
+    if (invitedCaptain != null &&
+        (selection.CurrentRound != 1 || invitedCaptain.AllianceNumber <= selection.CurrentAlliance ||
+         invitedCaptain.Members.Count > 0))
+    {
+        return BadRequest("Only a later captain without selected members can be invited in round one.");
+    }
     var team = await _context.Teams
         .FirstOrDefaultAsync(t => t.Id == request.TeamId);
 
@@ -568,6 +600,7 @@ public async Task<IActionResult> DeclineTeam(PickAllianceTeamRequest request)
     // A declined invitation does not advance the alliance.
     // The same captain may invite another eligible team.
     await _context.SaveChangesAsync();
+    await transaction.CommitAsync();
 
     return Ok(new
     {
@@ -599,6 +632,10 @@ public class StartAllianceSelectionRequest
 public class PickAllianceTeamRequest
 {
     public int AllianceSelectionId { get; set; }
+
+    public int? ExpectedRound { get; set; }
+
+    public int? ExpectedPickCount { get; set; }
 
     public int AllianceNumber { get; set; }
 

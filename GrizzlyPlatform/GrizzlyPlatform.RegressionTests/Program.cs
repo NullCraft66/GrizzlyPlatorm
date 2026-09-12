@@ -155,10 +155,11 @@ Check(Json(await configuration.GetConfiguration()).GetProperty("activeEventId").
 
 int submissionCount = await db.GameFormSubmissions.CountAsync();
 var migrations = (await db.Database.GetAppliedMigrationsAsync()).ToArray();
-Check(migrations.Last().EndsWith("_AddDeviceEventConfiguration"),
-    "Device migration is the latest migration");
+int deviceMigrationIndex = Array.FindIndex(migrations, m => m.EndsWith("_AddDeviceEventConfiguration"));
+Check(deviceMigrationIndex >= 1,
+    "Device migration is present");
 db.ChangeTracker.Clear();
-await db.GetService<IMigrator>().MigrateAsync(migrations[^2]);
+await db.GetService<IMigrator>().MigrateAsync(migrations[deviceMigrationIndex - 1]);
 await db.Database.MigrateAsync();
 db.ChangeTracker.Clear();
 Check(await db.GameFormSubmissions.CountAsync() == submissionCount,
@@ -168,3 +169,6 @@ Check((await db.ActiveScoutingConfigurations.SingleAsync()).ActivePitFormId == p
 Check(!(await db.Database.GetPendingMigrationsAsync()).Any(),
     "All database migrations applied");
 Console.WriteLine($"All {checks} device configuration regression checks passed.");
+await AllianceSelectionChecks.Run();
+
+await AlliancePlanningChecks.Run();

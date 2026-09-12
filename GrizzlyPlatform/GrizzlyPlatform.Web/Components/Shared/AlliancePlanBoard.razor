@@ -1,0 +1,249 @@
+@using GrizzlyPlatform.Web.Models
+@implements IDisposable
+@inject HttpClient Http
+
+<section class="card my-4">
+    <div class="card-body">
+        <h2>Our alliance plan</h2>
+        <p>Build a proposed alliance and put your preferred teams in order. Published reasons and notes are shared with devices. This does not record official draft picks.</p>
+        @if (message != null) { <p class="alert alert-info" role="status">@message</p> }
+        @if (error != null) { <p class="alert alert-danger" role="alert">@error</p> }
+        @if (board == null)
+        {
+            <button class="btn btn-secondary" disabled="@busy" @onclick="Reload">Load plan</button>
+        }
+        else
+        {
+            @if (HasUnsavedChanges)
+            {
+                <p class="text-warning">You have unpublished changes. Publish or discard them before changing events or reviewing suggestions.</p>
+            }
+            <fieldset disabled="@busy">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label for="plan-our-team" class="form-label">Our team</label>
+                        <select id="plan-our-team" class="form-select" @bind="board.OurTeamId" @bind:after="Changed">
+                            <option value="">Choose our team</option>
+                            @foreach (var team in board.Teams) { <option value="@team.TeamId">@team.TeamNumber - @team.TeamName</option> }
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="plan-partner-one" class="form-label">Proposed partner 1</label>
+                        <select id="plan-partner-one" class="form-select" @bind="board.FirstPartnerId" @bind:after="Changed">
+                            <option value="">Not chosen</option>
+                            @foreach (var team in board.Teams) { <option value="@team.TeamId">@team.TeamNumber - @team.TeamName</option> }
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="plan-partner-two" class="form-label">Proposed partner 2</label>
+                        <select id="plan-partner-two" class="form-select" @bind="board.SecondPartnerId" @bind:after="Changed">
+                            <option value="">Not chosen</option>
+                            @foreach (var team in board.Teams) { <option value="@team.TeamId">@team.TeamNumber - @team.TeamName</option> }
+                        </select>
+                    </div>
+                </div>
+                <label for="plan-notes" class="form-label mt-3">Strategy and communication notes</label>
+                <textarea id="plan-notes" class="form-control" rows="3" maxlength="4000"
+                          @bind="board.Notes" @bind:event="oninput" @bind:after="Changed"></textarea>
+                <h3 class="mt-4">Ordered wishlist</h3>
+                <div class="d-flex gap-2 mb-3">
+                    <select class="form-select" aria-label="Team to add to wishlist" @bind="teamToAdd">
+                        <option value="0">Choose a team</option>
+                        @foreach (var team in board.Teams) { <option value="@team.TeamId">@team.TeamNumber - @team.TeamName</option> }
+                    </select>
+                    <button class="btn btn-secondary" disabled="@(teamToAdd == 0)" @onclick="() => AddTeam(teamToAdd)">Add team</button>
+                </div>
+                @if (board.Wishlist.Count == 0) { <p>No teams on the wishlist yet.</p> }
+                @foreach (var entry in board.Wishlist)
+                {
+                    var index = board.Wishlist.IndexOf(entry);
+                    <div class="border rounded p-3 mb-2" @key="entry.TeamId">
+                        <strong>@(index + 1). @TeamLabel(entry.TeamId)</strong>
+                        <div class="d-flex flex-wrap gap-2 my-2">
+                            <button class="btn btn-sm btn-outline-secondary" disabled="@(index == 0)" @onclick="() => Move(entry, -1)">Move up</button>
+                            <button class="btn btn-sm btn-outline-secondary" disabled="@(index == board.Wishlist.Count - 1)" @onclick="() => Move(entry, 1)">Move down</button>
+                            <button class="btn btn-sm btn-outline-primary" @onclick="() => SetPartner(entry.TeamId, true)">Partner 1</button>
+                            <button class="btn btn-sm btn-outline-primary" @onclick="() => SetPartner(entry.TeamId, false)">Partner 2</button>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => Remove(entry)">Remove</button>
+                        </div>
+                        <label for="@($"plan-reason-{entry.TeamId}")" class="form-label">Why we want this team</label>
+                        <textarea id="@($"plan-reason-{entry.TeamId}")" class="form-control" maxlength="2000" rows="2"
+                                  @bind="entry.Reason" @bind:event="oninput" @bind:after="Changed"></textarea>
+                    </div>
+                }
+                <button class="btn btn-primary mt-3" @onclick="Publish">Publish plan to devices</button>
+                <button class="btn btn-outline-secondary mt-3" @onclick="Reload">
+                    @(HasUnsavedChanges ? "Discard changes / reload" : "Reload published plan")
+                </button>
+            </fieldset>
+            <p class="text-muted mt-2">
+                @(board.UpdatedAt.HasValue ? $"Published {board.UpdatedAt.Value.ToLocalTime():g}" : "No plan published yet.")
+            </p>
+            <h3>Device suggestions</h3>
+            <p class="text-muted">Checks for new suggestions every 15 seconds. Accepted suggestions go to the end of the published wishlist; you can then move them.</p>
+            <button class="btn btn-outline-secondary mb-3" disabled="@busy" @onclick="RefreshInbox">Refresh suggestions</button>
+            @if (!board.Suggestions.Any(s => s.Status == "Pending")) { <p>No pending suggestions.</p> }
+            @foreach (var suggestion in board.Suggestions.Where(s => s.Status == "Pending"))
+            {
+                <div class="border rounded p-3 mb-2" @key="suggestion.Id">
+                    <strong>@TeamLabel(suggestion.TeamId)</strong>
+                    <p>Suggested by @suggestion.Author - @suggestion.CreatedAt.ToLocalTime().ToString("g")</p>
+                    <p style="white-space:pre-wrap">@suggestion.Reason</p>
+                    <input class="form-control mb-2" aria-label="Response to suggestion" placeholder="Response to the team (optional)" maxlength="2000"
+                           value="@responses.GetValueOrDefault(suggestion.Id, "")"
+                           @oninput="e => responses[suggestion.Id] = e.Value?.ToString() ?? string.Empty" />
+                    <button class="btn btn-success" disabled="@(busy || HasUnsavedChanges)" @onclick="() => Review(suggestion, true)">Accept to wishlist</button>
+                    <button class="btn btn-outline-secondary" disabled="@(busy || HasUnsavedChanges)" @onclick="() => Review(suggestion, false)">Dismiss</button>
+                </div>
+            }
+            <details>
+                <summary>Reviewed suggestions</summary>
+                @foreach (var suggestion in board.Suggestions.Where(s => s.Status != "Pending"))
+                {
+                    <p><strong>@TeamLabel(suggestion.TeamId) - @suggestion.Status</strong><br />@suggestion.Author: @suggestion.Reason<br />Host: @suggestion.HostResponse</p>
+                }
+            </details>
+        }
+    </div>
+</section>
+
+@code {
+    [Parameter] public int EventId { get; set; }
+    [Parameter] public EventCallback<bool> DirtyChanged { get; set; }
+    public bool HasUnsavedChanges { get; private set; }
+    public bool IsLoaded => board != null && !busy;
+    private AlliancePlanView? board;
+    private int loadedEvent;
+    private int teamToAdd;
+    private bool busy;
+    private bool disposed;
+    private string? error;
+    private string? message;
+    private readonly Dictionary<Guid, string> responses = new();
+    private readonly CancellationTokenSource cancellation = new();
+
+    protected override void OnInitialized() => _ = Poll();
+    protected override async Task OnParametersSetAsync()
+    {
+        if (loadedEvent == EventId) return;
+        loadedEvent = EventId;
+        board = null;
+        HasUnsavedChanges = false;
+        responses.Clear();
+        await Reload();
+    }
+    private string Url => $"api/AlliancePlans/event/{EventId}";
+    private string TeamLabel(int id)
+    {
+        var team = board?.Teams.FirstOrDefault(t => t.TeamId == id);
+        return team == null ? $"Team ID {id}" : $"{team.TeamNumber} - {team.TeamName}";
+    }
+    private async Task Changed()
+    {
+        HasUnsavedChanges = true;
+        message = null;
+        await DirtyChanged.InvokeAsync(true);
+    }
+    public async Task AddTeam(int id)
+    {
+        if (board == null || busy || !board.Teams.Any(t => t.TeamId == id)) return;
+        if (board.Wishlist.Any(t => t.TeamId == id)) { message = "That team is already on the wishlist."; StateHasChanged(); return; }
+        board.Wishlist.Add(new() { TeamId = id });
+        await Changed();
+        StateHasChanged();
+    }
+    private async Task Move(AllianceWishlistView entry, int delta)
+    {
+        int target = board!.Wishlist.IndexOf(entry) + delta;
+        if (target < 0 || target >= board.Wishlist.Count) return;
+        board.Wishlist.Remove(entry);
+        board.Wishlist.Insert(target, entry);
+        await Changed();
+    }
+    private async Task Remove(AllianceWishlistView entry) { board!.Wishlist.Remove(entry); await Changed(); }
+    private async Task SetPartner(int id, bool first)
+    {
+        if (first) board!.FirstPartnerId = id; else board!.SecondPartnerId = id;
+        await Changed();
+    }
+    private async Task Reload()
+    {
+        if (busy || EventId <= 0) return;
+        busy = true;
+        error = null;
+        try
+        {
+            board = await Http.GetFromJsonAsync<AlliancePlanView>(Url, cancellation.Token);
+            HasUnsavedChanges = false;
+            await DirtyChanged.InvokeAsync(false);
+        }
+        catch (OperationCanceledException) when (disposed) { }
+        catch (Exception ex) { error = $"Could not load the plan: {ex.Message}"; }
+        finally { busy = false; }
+    }
+    private async Task Publish()
+    {
+        if (busy || board == null) return;
+        busy = true;
+        error = null;
+        try
+        {
+            using var response = await Http.PutAsJsonAsync(Url, board, cancellation.Token);
+            if (!response.IsSuccessStatusCode) { error = await response.Content.ReadAsStringAsync(); return; }
+            var published = (await response.Content.ReadFromJsonAsync<AlliancePlanView>())!;
+            board.Version = published.Version;
+            board.UpdatedAt = published.UpdatedAt;
+            HasUnsavedChanges = false;
+            await DirtyChanged.InvokeAsync(false);
+            message = "Plan published. Devices will see it on their next refresh.";
+        }
+        catch (OperationCanceledException) when (disposed) { }
+        catch (Exception ex) { error = $"Could not publish the plan: {ex.Message}"; }
+        finally { busy = false; }
+    }
+    private async Task RefreshInbox()
+    {
+        if (busy || board == null || disposed) return;
+        try
+        {
+            var latest = await Http.GetFromJsonAsync<AlliancePlanView>(Url, cancellation.Token);
+            if (latest == null || disposed || busy) return;
+            board.Suggestions = latest.Suggestions;
+            if (latest.Version > board.Version)
+            {
+                if (!HasUnsavedChanges) board = latest;
+                else message = "The published plan changed elsewhere. Your edits are kept here; reload before publishing.";
+            }
+        }
+        catch (OperationCanceledException) when (disposed) { }
+        catch (Exception ex) { error = $"Suggestions could not refresh: {ex.Message}"; }
+    }
+    private async Task Review(AllianceSuggestionView suggestion, bool accept)
+    {
+        if (busy || HasUnsavedChanges || board == null) return;
+        busy = true;
+        error = null;
+        try
+        {
+            using var response = await Http.PostAsJsonAsync($"{Url}/suggestions/{suggestion.Id}/review",
+                new { board.Version, accept, hostResponse = responses.GetValueOrDefault(suggestion.Id, "") }, cancellation.Token);
+            if (!response.IsSuccessStatusCode) { error = await response.Content.ReadAsStringAsync(); return; }
+            board = await Http.GetFromJsonAsync<AlliancePlanView>(Url, cancellation.Token);
+            message = accept ? "Suggestion accepted to the wishlist." : "Suggestion dismissed.";
+        }
+        catch (OperationCanceledException) when (disposed) { }
+        catch (Exception ex) { error = $"Could not review the suggestion: {ex.Message}"; }
+        finally { busy = false; }
+    }
+    private async Task Poll()
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(15));
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellation.Token))
+                await InvokeAsync(async () => { await RefreshInbox(); if (!disposed) StateHasChanged(); });
+        }
+        catch (OperationCanceledException) { }
+    }
+    public void Dispose() { disposed = true; cancellation.Cancel(); cancellation.Dispose(); }
+}
