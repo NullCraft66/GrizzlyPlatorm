@@ -1,101 +1,28 @@
 using System.Text.Json;
-
 namespace GrizzlyPlatform.Api.Services;
 
-public class TheBlueAllianceService
+public class TheBlueAllianceService(HttpClient httpClient, IConfiguration configuration)
 {
-    private readonly HttpClient _httpClient;
-    private readonly IConfiguration _configuration;
+    public Task<JsonElement> GetEventTeamsAsync(string key, CancellationToken token = default) =>
+        GetAsync(key, "teams", token);
+    public Task<JsonElement> GetEventMatchesAsync(string key, CancellationToken token = default) =>
+        GetAsync(key, "matches", token);
+    public Task<JsonElement> GetEventRankingsAsync(string key, CancellationToken token = default) =>
+        GetAsync(key, "rankings", token);
 
-    public TheBlueAllianceService(
-        HttpClient httpClient,
-        IConfiguration configuration)
+    private async Task<JsonElement> GetAsync(string key, string resource, CancellationToken token)
     {
-        _httpClient = httpClient;
-        _configuration = configuration;
-    }
-
-    public async Task<JsonElement> GetEventTeamsAsync(string eventKey)
-    {
-        var apiKey = _configuration["TheBlueAlliance:ApiKey"];
-
+        var apiKey = configuration["TheBlueAlliance:ApiKey"];
         if (string.IsNullOrWhiteSpace(apiKey))
-        {
-            throw new InvalidOperationException(
-                "The Blue Alliance API key is not configured.");
-        }
-
-        using var request = new HttpRequestMessage(
-            HttpMethod.Get,
-            $"event/{eventKey}/teams");
-
+            throw new InvalidOperationException("The Blue Alliance API key is not configured.");
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);
+        timeout.CancelAfter(TimeSpan.FromSeconds(15));
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"event/{Uri.EscapeDataString(key)}/{resource}");
         request.Headers.Add("X-TBA-Auth-Key", apiKey);
-
-        var response = await _httpClient.SendAsync(request);
-
+        using var response = await httpClient.SendAsync(request, timeout.Token);
         response.EnsureSuccessStatusCode();
-
-        var json = await response.Content.ReadAsStringAsync();
-
+        var json = await response.Content.ReadAsStringAsync(timeout.Token);
         using var document = JsonDocument.Parse(json);
-
         return document.RootElement.Clone();
     }
-
-    public async Task<JsonElement> GetEventMatchesAsync(string eventKey)
-    {
-        var apiKey = _configuration["TheBlueAlliance:ApiKey"];
-
-        if (string.IsNullOrWhiteSpace(apiKey))
-        {
-            throw new InvalidOperationException(
-                "The Blue Alliance API key is not configured.");
-        }
-
-        using var request = new HttpRequestMessage(
-            HttpMethod.Get,
-            $"event/{eventKey}/matches");
-
-        request.Headers.Add("X-TBA-Auth-Key", apiKey);
-
-        var response = await _httpClient.SendAsync(request);
-
-        response.EnsureSuccessStatusCode();
-
-        var json = await response.Content.ReadAsStringAsync();
-
-        using var document = JsonDocument.Parse(json);
-
-        return document.RootElement.Clone();
-    }
-public async Task<JsonElement> GetEventRankingsAsync(string eventKey)
-{
-    var apiKey = _configuration["TheBlueAlliance:ApiKey"];
-
-    if (string.IsNullOrWhiteSpace(apiKey))
-    {
-        throw new InvalidOperationException(
-            "The Blue Alliance API key is not configured.");
-    }
-
-    using var request = new HttpRequestMessage(
-        HttpMethod.Get,
-        $"event/{eventKey}/rankings");
-
-    request.Headers.Add("X-TBA-Auth-Key", apiKey);
-
-    var response = await _httpClient.SendAsync(request);
-
-    response.EnsureSuccessStatusCode();
-
-    var json = await response.Content.ReadAsStringAsync();
-
-    Console.WriteLine("========== TBA RANKINGS RESPONSE ==========");
-    Console.WriteLine(json);
-    Console.WriteLine("===========================================");
-
-    using var document = JsonDocument.Parse(json);
-
-    return document.RootElement.Clone();
-}
 }

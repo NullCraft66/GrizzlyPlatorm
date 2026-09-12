@@ -361,6 +361,42 @@ namespace GrizzlyPlatform.Api.Migrations
                     b.ToTable("EventRankings");
                 });
 
+            modelBuilder.Entity("GrizzlyPlatform.Api.Models.EventSyncState", b =>
+                {
+                    b.Property<int>("EventId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Resource")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastAttemptAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastChangedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastSuccessAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("ManualMode")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Revision")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("EventId", "Resource");
+
+                    b.ToTable("EventSyncStates");
+                });
+
             modelBuilder.Entity("GrizzlyPlatform.Api.Models.EventTeam", b =>
                 {
                     b.Property<int>("Id")
@@ -847,6 +883,15 @@ namespace GrizzlyPlatform.Api.Migrations
                     b.Navigation("Event");
 
                     b.Navigation("Team");
+                });
+
+            modelBuilder.Entity("GrizzlyPlatform.Api.Models.EventSyncState", b =>
+                {
+                    b.HasOne("GrizzlyPlatform.Api.Models.Event", null)
+                        .WithMany()
+                        .HasForeignKey("EventId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("GrizzlyPlatform.Api.Models.EventTeam", b =>

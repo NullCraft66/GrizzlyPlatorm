@@ -1,0 +1,8 @@
+.sync-card { border: 1px solid #adb5bd; border-radius: .5rem; padding: 1rem; margin: 1rem 0; }
+label { display: inline-flex; flex-direction: column; margin: .4rem; gap: .25rem; }
+button { margin: .25rem; }
+dt { font-weight: 600; }
+dd { margin-bottom: .4rem; }
+fieldset { min-width: 0; }
+.table { display: block; overflow-x: auto; }
+li { padding: .25rem; }

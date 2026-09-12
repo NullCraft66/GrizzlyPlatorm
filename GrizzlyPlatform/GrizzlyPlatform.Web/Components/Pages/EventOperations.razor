@@ -1,0 +1,221 @@
+@page "/event-operations"
+@rendermode InteractiveServer
+@inject HttpClient Http
+
+<PageTitle>Event Operations</PageTitle>
+<h1>Event Operations</h1>
+<p>Keep scouting when external updates are delayed. Manual saves pause automatic updates for that category.</p>
+<label>Event
+    <select @bind="selected" @bind:after="Load" disabled="@(busy || editing)">
+        <option value="0">Select an event</option>
+        @foreach (var e in events) { <option value="@e.Id">@e.Season?.Year @e.Name</option> }
+    </select>
+</label>
+<button @onclick="Load" disabled="@(busy || editing || selected == 0)">Refresh saved data</button>
+@if (!string.IsNullOrEmpty(message)) { <p role="status">@message</p> }
+@if (data != null)
+{
+    <fieldset disabled="@busy">
+    <h2>Update status</h2>
+    <p>“Last successful check” means the source responded with usable data; it does not guarantee the source is current.</p>
+    @foreach (var state in data.States)
+    {
+        <section class="sync-card">
+            <h3>@state.Resource — @(state.ManualMode ? "Manual • automatic updates paused" : "Automatic")</h3>
+            <p><strong>@state.Outcome:</strong> @state.Message</p>
+            <dl>
+                <dt>Last attempt</dt><dd>@Time(state.LastAttemptAt)</dd>
+                <dt>Last successful check</dt><dd>@Time(state.LastSuccessAt)</dd>
+                <dt>Last saved change</dt><dd>@Time(state.LastChangedAt)</dd>
+            </dl>
+            @if (state.ManualMode)
+            {
+                <p>Resuming allows future successful updates to replace manual corrections.</p>
+                <button disabled="@editing" @onclick="() => SetMode(state, false)">Resume automatic updates</button>
+            }
+            else
+            {
+                <button disabled="@editing" @onclick="() => SetMode(state, true)">Pause automatic updates</button>
+                <button disabled="@editing" @onclick="() => Retry(state.Resource)">Check now</button>
+            }
+        </section>
+    }
+    <fieldset disabled="@(editing && editSection != "teams")"><h2>Event teams</h2>
+    <p>@string.Join(", ", data.Teams.Select(t => t.TeamNumber))</p>
+    <label>Team number <input type="number" min="1" @bind="teamNumber" @bind:after="DirtyTeam" /></label>
+    <label>Team name <input maxlength="150" @bind="teamName" @bind:after="DirtyTeam" /></label>
+    <button @onclick="AddTeam">Add team and pause team updates</button>
+
+    </fieldset><fieldset disabled="@(editing && editSection != "matches")"><h2>Schedule and scores</h2>
+    <p>Leave both scores blank for an unplayed match. Matches with submissions keep their identity and assigned teams.</p>
+    <table class="table">
+        <thead><tr><th>Match</th><th>Red</th><th>Blue</th><th>Score</th><th></th></tr></thead>
+        <tbody>
+        @foreach (var match in data.Matches)
+        {
+            <tr><td>@match.MatchType @match.MatchNumber (set @match.SetNumber)</td>
+                <td>@string.Join(", ", match.TeamNumbers.Take(3))</td>
+                <td>@string.Join(", ", match.TeamNumbers.Skip(3))</td>
+                <td>@match.RedScore – @match.BlueScore</td>
+                <td><button disabled="@editing" @onclick="() => Edit(match)">Edit</button></td></tr>
+        }
+        </tbody>
+    </table>
+    <h3>@(draft.Id == 0 ? "Add match" : "Edit match")</h3>
+    <label>Type <select @bind="draft.MatchType" @bind:after="DirtyMatch">
+        <option>Qualification</option><option>EighthFinal</option><option>Quarterfinal</option><option>Semifinal</option><option>Final</option>
+    </select></label>
+    <label>Match number <input type="number" min="1" @bind="draft.MatchNumber" @bind:after="DirtyMatch" /></label>
+    <label>Set number <input type="number" min="0" @bind="draft.SetNumber" @bind:after="DirtyMatch" /></label>
+    <div>
+        @for (var i = 0; i < 6; i++)
+        {
+            var position = i;
+            <label>@(i < 3 ? "Red" : "Blue") @(i % 3 + 1)
+                <select @bind="draft.TeamNumbers[position]" @bind:after="DirtyMatch">
+                    <option value="0">Select team</option>
+                    @foreach (var t in data.Teams) { <option value="@t.TeamNumber">@t.TeamNumber — @t.Name</option> }
+                </select>
+            </label>
+        }
+    </div>
+    <label>Red score <input type="number" min="0" @bind="draft.RedScore" @bind:after="DirtyMatch" /></label>
+    <label>Blue score <input type="number" min="0" @bind="draft.BlueScore" @bind:after="DirtyMatch" /></label>
+    <button @onclick="SaveMatch">Save match and pause match updates</button>
+
+    </fieldset><fieldset disabled="@(editing && editSection != "rankings")"><h2>Manual ranking order</h2>
+    <p>This is event ranking order. Existing alliance drafts keep their saved rankings and picks; wishlist preferences belong in Alliance Plan.</p>
+    <ol>
+        @for (var i = 0; i < order.Count; i++)
+        {
+            var index = i;
+            var team = data.Teams.First(t => t.Id == order[index]);
+            <li>@team.TeamNumber — @team.Name
+                <button aria-label="@($"Move team {team.TeamNumber} up")" disabled="@(index == 0)" @onclick="() => Move(index, -1)">↑</button>
+                <button aria-label="@($"Move team {team.TeamNumber} down")" disabled="@(index == order.Count - 1)" @onclick="() => Move(index, 1)">↓</button>
+            </li>
+        }
+    </ol>
+    <button disabled="@(order.Count == 0)" @onclick="SaveRankings">Save order and pause ranking updates</button>
+    </fieldset>
+    @if (editing)
+    {
+        <p>Unsaved edits. Save the relevant section or discard edits before refreshing or switching events.</p>
+        <button @onclick="Discard">Discard unsaved edits</button>
+    }
+    </fieldset>
+}
+@code {
+    [SupplyParameterFromQuery(Name = "eventId")] public int? EventId { get; set; }
+    private List<Events.EventModel> events = new();
+    private int selected;
+    private bool busy, editing;
+    private string message = "", teamName = "";
+    private int teamNumber;
+    private Operations? data;
+    private MatchEdit draft = new();
+    private List<int> order = new();
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            events = await Http.GetFromJsonAsync<List<Events.EventModel>>("api/events") ?? new();
+            selected = EventId ?? 0;
+            await Load();
+        }
+        catch (Exception ex) { message = $"Could not load events: {ex.Message}"; }
+    }
+    private static string Time(DateTime? value) => value?.ToLocalTime().ToString("g") ?? "Never";
+    private string editSection = "";
+    private void DirtyTeam() { editing = true; editSection = "teams"; }
+    private void DirtyMatch() { editing = true; editSection = "matches"; }
+    private SyncState State(string resource) => data!.States.Single(s => s.Resource == resource);
+    private async Task Load()
+    {
+        if (selected == 0) { data = null; return; }
+        busy = true;
+        try
+        {
+            var loaded = await Http.GetFromJsonAsync<Operations>($"api/EventOperations/{selected}");
+            data = loaded ?? throw new InvalidOperationException("Empty event response.");
+            order = data.Rankings.OrderBy(r => r.Rank).Select(r => r.TeamId)
+                .Concat(data.Teams.Select(t => t.Id)).Distinct().ToList();
+            draft = new(); teamName = ""; teamNumber = 0; editing = false;
+        }
+        catch (Exception ex) { message = $"Could not refresh: {ex.Message}"; }
+        finally { busy = false; }
+    }
+    private async Task Send(Func<Task<HttpResponseMessage>> action, string success)
+    {
+        busy = true;
+        try
+        {
+            using var response = await action();
+            if (!response.IsSuccessStatusCode)
+            {
+                message = $"Save/check failed: {await response.Content.ReadAsStringAsync()}";
+                return;
+            }
+            message = success;
+            await Load();
+        }
+        catch (Exception ex) { message = $"Request failed. Your edits are still here: {ex.Message}"; }
+        finally { busy = false; }
+    }
+    private Task Retry(string resource) => Send(() => Http.PostAsync($"api/EventOperations/{selected}/sync/{resource}", null),
+        "Check finished. See the category status above.");
+    private Task SetMode(SyncState state, bool manual) => Send(() => Http.PutAsJsonAsync(
+        $"api/EventOperations/{selected}/mode/{state.Resource}", new { state.Revision, ManualMode = manual }),
+        manual ? "Automatic updates paused." : "Automatic updates resumed.");
+    private Task AddTeam() => Send(() => Http.PostAsJsonAsync($"api/EventOperations/{selected}/teams",
+        new { Revision = State("teams").Revision, TeamNumber = teamNumber, Name = teamName }), "Team saved; team updates paused.");
+    private Task SaveRankings() => Send(() => Http.PutAsJsonAsync($"api/EventOperations/{selected}/rankings",
+        new { Revision = State("rankings").Revision, TeamIds = order }), "Ranking order saved; ranking updates paused.");
+    private Task SaveMatch()
+    {
+        draft.Revision = State("matches").Revision;
+        return Send(() => Http.PutAsJsonAsync($"api/EventOperations/{selected}/matches", draft), "Match saved; match updates paused.");
+    }
+    private void Edit(MatchEdit match)
+    {
+        draft = new() { Id = match.Id, MatchType = match.MatchType, MatchNumber = match.MatchNumber,
+            SetNumber = match.SetNumber, TeamNumbers = match.TeamNumbers.ToArray(), RedScore = match.RedScore, BlueScore = match.BlueScore };
+        DirtyMatch();
+    }
+    private void Move(int index, int direction)
+    {
+        (order[index], order[index + direction]) = (order[index + direction], order[index]);
+        editing = true; editSection = "rankings";
+    }
+    private async Task Discard() { editing = false; await Load(); }
+    public class Operations
+    {
+        public List<SyncState> States { get; set; } = new();
+        public List<Events.TeamModel> Teams { get; set; } = new();
+        public List<MatchEdit> Matches { get; set; } = new();
+        public List<Ranking> Rankings { get; set; } = new();
+    }
+    public class Ranking { public int TeamId { get; set; } public int Rank { get; set; } }
+    public class SyncState
+    {
+        public string Resource { get; set; } = "";
+        public string Outcome { get; set; } = "";
+        public string Message { get; set; } = "";
+        public bool ManualMode { get; set; }
+        public long Revision { get; set; }
+        public DateTime? LastAttemptAt { get; set; }
+        public DateTime? LastSuccessAt { get; set; }
+        public DateTime? LastChangedAt { get; set; }
+    }
+    public class MatchEdit
+    {
+        public long Revision { get; set; }
+        public int Id { get; set; }
+        public string MatchType { get; set; } = "Qualification";
+        public int MatchNumber { get; set; } = 1;
+        public int SetNumber { get; set; }
+        public int[] TeamNumbers { get; set; } = new int[6];
+        public int? RedScore { get; set; }
+        public int? BlueScore { get; set; }
+    }
+}

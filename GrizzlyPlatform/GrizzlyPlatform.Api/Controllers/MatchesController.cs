@@ -1,4 +1,5 @@
 using GrizzlyPlatform.Api.Data;
+using GrizzlyPlatform.Api.Services;
 using GrizzlyPlatform.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -158,62 +159,88 @@ public class MatchesController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreateMatch(Match match)
+    public async Task<IActionResult> CreateMatch(Match input, [FromQuery] long? revision = null)
     {
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+        var error = await Validate(input);
+        if (error != null) return BadRequest(error);
+        var state = await EventSyncService.State(_context, input.EventId, "matches");
+        if (revision.HasValue && revision != state.Revision) return Conflict("Schedule changed. Reload before saving.");
+        if (await _context.Matches.AnyAsync(m => m.EventId == input.EventId && m.MatchType == input.MatchType &&
+            m.MatchNumber == input.MatchNumber && m.SetNumber == input.SetNumber))
+            return Conflict("This match already exists. Edit it instead.");
+        var match = new Match();
+        Copy(input, match);
         _context.Matches.Add(match);
+        await EventSyncService.MarkManual(_context, match.EventId, "matches");
         await _context.SaveChangesAsync();
-
-        return CreatedAtAction(
-            nameof(GetMatch),
-            new { id = match.Id },
-            match);
+        await transaction.CommitAsync();
+        return CreatedAtAction(nameof(GetMatch), new { id = match.Id }, new { match.Id });
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateMatch(int id, Match updatedMatch)
+    public async Task<IActionResult> UpdateMatch(int id, Match input, [FromQuery] long? revision = null)
     {
+        await using var transaction = await _context.Database.BeginTransactionAsync();
         var match = await _context.Matches.FindAsync(id);
-
-        if (match == null)
-        {
-            return NotFound();
-        }
-
-        match.EventId = updatedMatch.EventId;
-        match.MatchType = updatedMatch.MatchType;
-        match.MatchNumber = updatedMatch.MatchNumber;
-        match.SetNumber = updatedMatch.SetNumber;
-
-        match.RedTeam1Id = updatedMatch.RedTeam1Id;
-        match.RedTeam2Id = updatedMatch.RedTeam2Id;
-        match.RedTeam3Id = updatedMatch.RedTeam3Id;
-
-        match.BlueTeam1Id = updatedMatch.BlueTeam1Id;
-        match.BlueTeam2Id = updatedMatch.BlueTeam2Id;
-        match.BlueTeam3Id = updatedMatch.BlueTeam3Id;
-
-        match.RedScore = updatedMatch.RedScore;
-        match.BlueScore = updatedMatch.BlueScore;
-        match.WinningAlliance = updatedMatch.WinningAlliance;
-
+        if (match == null) return NotFound();
+        if (input.EventId != match.EventId) return BadRequest("A match cannot be moved to another event.");
+        var error = await Validate(input);
+        if (error != null) return BadRequest(error);
+        var state = await EventSyncService.State(_context, match.EventId, "matches");
+        if (revision.HasValue && revision != state.Revision) return Conflict("Schedule changed. Reload before saving.");
+        if (await _context.Matches.AnyAsync(m => m.Id != id && m.EventId == input.EventId && m.MatchType == input.MatchType &&
+            m.MatchNumber == input.MatchNumber && m.SetNumber == input.SetNumber))
+            return Conflict("That match number/type/set already exists.");
+        if (await _context.GameFormSubmissions.AnyAsync(s => s.MatchId == id) &&
+            (match.MatchType != input.MatchType || match.MatchNumber != input.MatchNumber ||
+             match.SetNumber != input.SetNumber || !Teams(match).SequenceEqual(Teams(input))))
+            return BadRequest("This match has scouting submissions. Only its scores can be edited.");
+        Copy(input, match);
+        await EventSyncService.MarkManual(_context, match.EventId, "matches");
         await _context.SaveChangesAsync();
-
-        return Ok(match);
+        await transaction.CommitAsync();
+        return Ok(new { match.Id });
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteMatch(int id)
     {
+        await using var transaction = await _context.Database.BeginTransactionAsync();
         var match = await _context.Matches.FindAsync(id);
-
-        if (match == null)
-        {
-            return NotFound();
-        }
-
+        if (match == null) return NotFound();
+        if (await _context.GameFormSubmissions.AnyAsync(s => s.MatchId == id))
+            return BadRequest("A match with scouting submissions cannot be deleted.");
         _context.Matches.Remove(match);
+        await EventSyncService.MarkManual(_context, match.EventId, "matches");
         await _context.SaveChangesAsync();
-
+        await transaction.CommitAsync();
         return NoContent();
+    }
+
+    private static int[] Teams(Match m) =>
+        [m.RedTeam1Id, m.RedTeam2Id, m.RedTeam3Id, m.BlueTeam1Id, m.BlueTeam2Id, m.BlueTeam3Id];
+    private async Task<string?> Validate(Match m)
+    {
+        if (!await _context.Events.AnyAsync(e => e.Id == m.EventId)) return "Event not found.";
+        if (!new[] { "Qualification", "EighthFinal", "Quarterfinal", "Semifinal", "Final" }.Contains(m.MatchType) ||
+            m.MatchNumber <= 0 || m.SetNumber < 0) return "Enter a valid match type, number, and set.";
+        var teams = Teams(m);
+        var roster = await _context.EventTeams.Where(t => t.EventId == m.EventId).Select(t => t.TeamId)
+            .Union(_context.EventRankings.Where(r => r.EventId == m.EventId).Select(r => r.TeamId)).ToListAsync();
+        if (teams.Distinct().Count() != 6 || teams.Any(id => !roster.Contains(id)))
+            return "Choose six different teams registered or ranked at this event.";
+        if (m.RedScore < 0 || m.BlueScore < 0 || m.RedScore.HasValue != m.BlueScore.HasValue)
+            return "Leave both scores blank for an unplayed match, or enter two nonnegative scores.";
+        return null;
+    }
+    private static void Copy(Match source, Match target)
+    {
+        target.EventId = source.EventId; target.MatchType = source.MatchType;
+        target.MatchNumber = source.MatchNumber; target.SetNumber = source.SetNumber;
+        target.RedTeam1Id = source.RedTeam1Id; target.RedTeam2Id = source.RedTeam2Id; target.RedTeam3Id = source.RedTeam3Id;
+        target.BlueTeam1Id = source.BlueTeam1Id; target.BlueTeam2Id = source.BlueTeam2Id; target.BlueTeam3Id = source.BlueTeam3Id;
+        target.RedScore = source.RedScore; target.BlueScore = source.BlueScore;
+        target.WinningAlliance = source.RedScore == null || source.RedScore == source.BlueScore ? "" : source.RedScore > source.BlueScore ? "red" : "blue";
     }
 }

@@ -13,6 +13,7 @@ public class GrizzlyDbContext : DbContext
     public DbSet<AlliancePlan> AlliancePlans { get; set; }
     public DbSet<AlliancePlanEntry> AlliancePlanEntries { get; set; }
     public DbSet<AlliancePlanSuggestion> AlliancePlanSuggestions { get; set; }
+    public DbSet<EventSyncState> EventSyncStates { get; set; }
     public DbSet<Team> Teams { get; set; }
     public DbSet<User> Users { get; set; }
     public DbSet<Season> Seasons { get; set; }
@@ -37,6 +38,9 @@ public class GrizzlyDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.Entity<EventSyncState>().HasKey(s => new { s.EventId, s.Resource });
+        modelBuilder.Entity<EventSyncState>().HasOne<Event>().WithMany()
+            .HasForeignKey(s => s.EventId).OnDelete(DeleteBehavior.Cascade);
         modelBuilder.Entity<AlliancePlan>().HasKey(p => p.EventId);
         modelBuilder.Entity<AlliancePlan>().HasOne<Event>().WithMany()
             .HasForeignKey(p => p.EventId).OnDelete(DeleteBehavior.Cascade);

@@ -1,4 +1,5 @@
 using GrizzlyPlatform.Api.Data;
+using GrizzlyPlatform.Api.Services;
 using GrizzlyPlatform.Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -81,6 +82,7 @@ public class EventTeamsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> AddTeamToEvent(EventTeam eventTeam)
     {
+        await using var transaction = await _context.Database.BeginTransactionAsync();
         var existing = await _context.EventTeams
             .FirstOrDefaultAsync(et =>
                 et.EventId == eventTeam.EventId &&
@@ -93,7 +95,9 @@ public class EventTeamsController : ControllerBase
         }
 
         _context.EventTeams.Add(eventTeam);
+        await EventSyncService.MarkManual(_context, eventTeam.EventId, "teams");
         await _context.SaveChangesAsync();
+        await transaction.CommitAsync();
 
         return Ok(new
         {
@@ -106,6 +110,7 @@ public class EventTeamsController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> RemoveTeamFromEvent(int id)
     {
+        await using var transaction = await _context.Database.BeginTransactionAsync();
         var eventTeam = await _context.EventTeams.FindAsync(id);
 
         if (eventTeam == null)
@@ -114,7 +119,9 @@ public class EventTeamsController : ControllerBase
         }
 
         _context.EventTeams.Remove(eventTeam);
+        await EventSyncService.MarkManual(_context, eventTeam.EventId, "teams");
         await _context.SaveChangesAsync();
+        await transaction.CommitAsync();
 
         return NoContent();
     }

@@ -115,6 +115,10 @@ build_metadata.AdditionalFiles.CssScope = b-kf8q27sy4h
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBbGxpYW5jZVNlbGVjdGlvbi5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = b-8ey2o67wfr
 
+[C:/YCSRobotics/GrizzlyPlatorm/GrizzlyPlatform/GrizzlyPlatform.Web/Components/Pages/EventOperations.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFdmVudE9wZXJhdGlvbnMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = b-rfh8r38znu
+
 [C:/YCSRobotics/GrizzlyPlatorm/GrizzlyPlatform/GrizzlyPlatform.Web/Components/Pages/Events.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFdmVudHMucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = b-ry7nw3r0za
