@@ -111,6 +111,18 @@ public class GrizzlyDbContext : DbContext
             .HasForeignKey(c => c.ActiveMatchFormId)
             .OnDelete(DeleteBehavior.SetNull);
 
+        modelBuilder.Entity<ActiveScoutingConfiguration>()
+            .HasOne<Season>()
+            .WithMany()
+            .HasForeignKey(c => c.ActiveSeasonId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<ActiveScoutingConfiguration>()
+            .HasOne<Event>()
+            .WithMany()
+            .HasForeignKey(c => c.ActiveEventId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         modelBuilder.Entity<AllianceSelection>()
             .HasOne(a => a.Event)
             .WithMany()
@@ -203,6 +215,3 @@ modelBuilder.Entity<EventRanking>()
     .IsUnique();
     }
 }
-
-
-

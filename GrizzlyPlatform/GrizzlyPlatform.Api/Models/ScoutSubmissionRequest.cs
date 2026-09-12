@@ -9,7 +9,7 @@ public class ScoutSubmissionRequest
 
     public string ScoutName { get; set; } = "";
 
-    // Only used for Match scouting.
+    // Event selected when opening either a Pit or Match form.
     public int? EventId { get; set; }
 
     public string? MatchType { get; set; }

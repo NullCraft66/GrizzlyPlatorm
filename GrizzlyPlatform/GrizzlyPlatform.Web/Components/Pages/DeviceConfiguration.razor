@@ -1,0 +1,185 @@
+@page "/device-configuration"
+@using GrizzlyPlatform.Web.Models
+@inject HttpClient Http
+
+<PageTitle>Device Configuration</PageTitle>
+
+<h1>Device Configuration</h1>
+<p class="text-muted">
+    Set the season, event, and forms used by all scouting devices.
+    Devices pick up saved changes when opening a new form.
+    Forms already in progress and earlier submissions keep their original event.
+</p>
+
+@if (errorMessage != null)
+{
+    <div class="alert alert-danger" role="alert">@errorMessage</div>
+}
+@if (successMessage != null)
+{
+    <div class="alert alert-success" role="status">@successMessage</div>
+}
+
+@if (loading)
+{
+    <p role="status">Loading device configuration...</p>
+}
+else if (!loaded)
+{
+    <button class="btn btn-primary" @onclick="Load">Retry</button>
+}
+else
+{
+    <div class="card">
+        <div class="card-body">
+            <fieldset disabled="@saving">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label" for="device-season">Active season</label>
+                        <select id="device-season" class="form-select"
+                                @bind="configuration.ActiveSeasonId" @bind:after="SeasonChanged">
+                            <option value="">No season preset</option>
+                            @foreach (var season in seasons.OrderByDescending(s => s.Year).ThenBy(s => s.Name))
+                            {
+                                <option value="@season.Id">@season.Year - @season.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="device-event">Active event</label>
+                        <select id="device-event" class="form-select"
+                                disabled="@(!configuration.ActiveSeasonId.HasValue)"
+                                @bind="configuration.ActiveEventId">
+                            <option value="">Let scouts select an event</option>
+                            @foreach (var eventItem in SeasonEvents)
+                            {
+                                <option value="@eventItem.Id">@eventItem.Name</option>
+                            }
+                        </select>
+                        @if (configuration.ActiveSeasonId.HasValue && !SeasonEvents.Any())
+                        {
+                            <p class="form-text">No events in this season. <a href="events">Add an event</a> first.</p>
+                        }
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="device-pit-form">Active pit form</label>
+                        <select id="device-pit-form" class="form-select" @bind="configuration.ActivePitFormId">
+                            <option value="">No active pit form</option>
+                            @foreach (var form in SeasonForms.Where(f => f.FormType == 0))
+                            {
+                                <option value="@form.Id">@form.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="device-match-form">Active match form</label>
+                        <select id="device-match-form" class="form-select" @bind="configuration.ActiveMatchFormId">
+                            <option value="">No active match form</option>
+                            @foreach (var form in SeasonForms.Where(f => f.FormType == 1))
+                            {
+                                <option value="@form.Id">@form.Name</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <p class="text-muted mt-3">
+                    Only forms and events from the selected season are offered.
+                    Changing seasons clears selections from the previous season.
+                    Saving a preset skips the event prompt for pit scouting.
+                </p>
+                <button class="btn btn-primary" @onclick="Save">
+                    @(saving ? "Saving..." : "Save for devices")
+                </button>
+            </fieldset>
+        </div>
+    </div>
+}
+
+@code {
+    private List<SeasonModel> seasons = new();
+    private List<EventModel> events = new();
+    private List<GameFormModel> forms = new();
+    private DeviceConfigurationModel configuration = new();
+    private bool loading = true;
+    private bool loaded;
+    private bool saving;
+    private string? errorMessage;
+    private string? successMessage;
+
+    private IEnumerable<EventModel> SeasonEvents => events
+        .Where(e => e.SeasonId == configuration.ActiveSeasonId).OrderBy(e => e.Name);
+
+    private IEnumerable<GameFormModel> SeasonForms => forms
+        .Where(f => !configuration.ActiveSeasonId.HasValue ||
+                    f.SeasonId == configuration.ActiveSeasonId).OrderBy(f => f.Name);
+
+    protected override Task OnInitializedAsync() => Load();
+
+    private async Task Load()
+    {
+        loading = true;
+        loaded = false;
+        errorMessage = null;
+        try
+        {
+            seasons = await Http.GetFromJsonAsync<List<SeasonModel>>("api/Seasons") ?? new();
+            events = await Http.GetFromJsonAsync<List<EventModel>>("api/Events") ?? new();
+            forms = await Http.GetFromJsonAsync<List<GameFormModel>>("api/GameForms") ?? new();
+            configuration = await Http.GetFromJsonAsync<DeviceConfigurationModel>(
+                "api/ActiveScoutingConfiguration") ?? new();
+            loaded = true;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Could not load device configuration: {ex.Message}";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private void SeasonChanged()
+    {
+        configuration.ActiveEventId = null;
+        if (!SeasonForms.Any(f => f.Id == configuration.ActivePitFormId))
+            configuration.ActivePitFormId = null;
+        if (!SeasonForms.Any(f => f.Id == configuration.ActiveMatchFormId))
+            configuration.ActiveMatchFormId = null;
+        successMessage = null;
+    }
+
+    private async Task Save()
+    {
+        saving = true;
+        errorMessage = null;
+        successMessage = null;
+        try
+        {
+            using var response = await Http.PutAsJsonAsync(
+                "api/ActiveScoutingConfiguration/devices", configuration);
+            if (!response.IsSuccessStatusCode)
+            {
+                errorMessage = await response.Content.ReadAsStringAsync();
+                return;
+            }
+            successMessage = "Configuration saved. Devices will use it for newly opened forms.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Could not save device configuration: {ex.Message}";
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+
+    private sealed class DeviceConfigurationModel
+    {
+        public int? ActiveSeasonId { get; set; }
+        public int? ActiveEventId { get; set; }
+        public int? ActivePitFormId { get; set; }
+        public int? ActiveMatchFormId { get; set; }
+    }
+}

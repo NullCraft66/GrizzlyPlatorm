@@ -27,8 +27,9 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
-app.UseHttpsRedirection();
+// HTTPS disabled for local scouting prototype
 
+app.UseWebSockets();
 app.UseAntiforgery();
 
 app.MapStaticAssets();
@@ -36,4 +37,5 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.Run();
+
 

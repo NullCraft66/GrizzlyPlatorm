@@ -552,9 +552,12 @@ private async Task LoadRankedTeams()
             })
             .ToList();
 
-        topEight = filteredTeams
-            .Take(8)
-            .ToList();
+        if (selection == null)
+        {
+            topEight = filteredTeams
+                .Take(8)
+                .ToList();
+        }
     }
     catch (Exception ex)
     {
@@ -900,15 +903,10 @@ private class ScoutingAnswerModel
         public int AllianceNumber { get; set; }
         public int TeamId { get; set; }
     }
-    
+        
     private class EventRankingResponse
     {
         public int Id { get; set; }
-private class EventRankingsResponse
-{
-    public List<EventRankingResponse> Value { get; set; } = new();
-    public int Count { get; set; }
-}
         public int EventId { get; set; }
         public int TeamId { get; set; }
         public int TeamNumber { get; set; }
@@ -918,17 +916,21 @@ private class EventRankingsResponse
         public double? TieBreaker1 { get; set; }
         public double? TieBreaker2 { get; set; }
     }
-private class EventRankingsResponse
-{
-    public List<EventRankingResponse> Value { get; set; } = new();
-    public int Count { get; set; }
+
+    private class EventRankingsResponse
+    {
+        public List<EventRankingResponse> Value { get; set; } = new();
+        public int Count { get; set; }
+    }
+
+
+
+
+
+
+
+
+
+
+
 }
-}
-
-
-
-
-
-
-
-

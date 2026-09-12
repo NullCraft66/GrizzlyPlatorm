@@ -11,117 +11,85 @@ public class ActiveScoutingConfigurationController : ControllerBase
 {
     private readonly GrizzlyDbContext _context;
 
-    public ActiveScoutingConfigurationController(
-        GrizzlyDbContext context)
+    public ActiveScoutingConfigurationController(GrizzlyDbContext context)
     {
         _context = context;
     }
 
-    // GET: api/ActiveScoutingConfiguration
     [HttpGet]
     public async Task<IActionResult> GetConfiguration()
     {
-        var configuration =
-            await _context.ActiveScoutingConfigurations
-                .FirstOrDefaultAsync();
-
-        if (configuration == null)
-        {
-            return Ok(new
-            {
-                activePitFormId = (int?)null,
-                activeMatchFormId = (int?)null
-            });
-        }
-
-        return Ok(new
-        {
-            activePitFormId =
-                configuration.ActivePitFormId,
-
-            activeMatchFormId =
-                configuration.ActiveMatchFormId
-        });
+        var configuration = await _context.ActiveScoutingConfigurations
+            .AsNoTracking().FirstOrDefaultAsync();
+        return Ok(configuration ?? new ActiveScoutingConfiguration());
     }
 
-    // PUT: api/ActiveScoutingConfiguration
+    // Existing Game Forms clients update forms without clearing device defaults.
     [HttpPut]
-    public async Task<IActionResult> UpdateConfiguration(
-        ActiveScoutingConfiguration request)
+    public Task<IActionResult> UpdateConfiguration(ActiveScoutingConfiguration request)
     {
-        if (request.ActivePitFormId.HasValue)
+        return SaveConfiguration(request, updateDeviceDefaults: false);
+    }
+
+    [HttpPut("devices")]
+    public Task<IActionResult> UpdateDeviceConfiguration(ActiveScoutingConfiguration request)
+    {
+        return SaveConfiguration(request, updateDeviceDefaults: true);
+    }
+
+    private async Task<IActionResult> SaveConfiguration(
+        ActiveScoutingConfiguration request, bool updateDeviceDefaults)
+    {
+        var configuration = await _context.ActiveScoutingConfigurations
+            .FirstOrDefaultAsync();
+        int? seasonId = updateDeviceDefaults
+            ? request.ActiveSeasonId : configuration?.ActiveSeasonId;
+        int? eventId = updateDeviceDefaults
+            ? request.ActiveEventId : configuration?.ActiveEventId;
+
+        if (eventId.HasValue && !seasonId.HasValue)
+            return BadRequest("Select a season for the active event.");
+
+        if (seasonId.HasValue &&
+            !await _context.Seasons.AnyAsync(s => s.Id == seasonId.Value))
+            return BadRequest("The selected season does not exist.");
+
+        if (eventId.HasValue &&
+            !await _context.Events.AnyAsync(e =>
+                e.Id == eventId.Value && e.SeasonId == seasonId))
+            return BadRequest("The selected event does not belong to the selected season.");
+
+        foreach (var (formId, formType) in new[]
         {
-            var pitForm =
-                await _context.GameForms.FindAsync(
-                    request.ActivePitFormId.Value
-                );
-
-            if (pitForm == null)
-            {
-                return BadRequest(
-                    "The selected pit form does not exist."
-                );
-            }
-
-            if (pitForm.FormType != GameFormType.Pit)
-            {
-                return BadRequest(
-                    "The selected pit form is not a Pit form."
-                );
-            }
-        }
-
-        if (request.ActiveMatchFormId.HasValue)
+            (request.ActivePitFormId, GameFormType.Pit),
+            (request.ActiveMatchFormId, GameFormType.Match)
+        })
         {
-            var matchForm =
-                await _context.GameForms.FindAsync(
-                    request.ActiveMatchFormId.Value
-                );
+            if (!formId.HasValue)
+                continue;
 
-            if (matchForm == null)
-            {
-                return BadRequest(
-                    "The selected match form does not exist."
-                );
-            }
-
-            if (matchForm.FormType != GameFormType.Match)
-            {
-                return BadRequest(
-                    "The selected match form is not a Match form."
-                );
-            }
+            var form = await _context.GameForms.FindAsync(formId.Value);
+            if (form == null || form.FormType != formType)
+                return BadRequest($"Select a valid {formType} form.");
+            if (seasonId.HasValue && form.SeasonId != seasonId.Value)
+                return BadRequest($"The {formType} form must belong to the active season. Update Device Configuration first.");
         }
-
-        var configuration =
-            await _context.ActiveScoutingConfigurations
-                .FirstOrDefaultAsync();
 
         if (configuration == null)
         {
-            configuration =
-                new ActiveScoutingConfiguration();
-
-            _context.ActiveScoutingConfigurations.Add(
-                configuration
-            );
+            configuration = new ActiveScoutingConfiguration();
+            _context.ActiveScoutingConfigurations.Add(configuration);
         }
 
-        configuration.ActivePitFormId =
-            request.ActivePitFormId;
-
-        configuration.ActiveMatchFormId =
-            request.ActiveMatchFormId;
+        configuration.ActivePitFormId = request.ActivePitFormId;
+        configuration.ActiveMatchFormId = request.ActiveMatchFormId;
+        if (updateDeviceDefaults)
+        {
+            configuration.ActiveSeasonId = seasonId;
+            configuration.ActiveEventId = eventId;
+        }
 
         await _context.SaveChangesAsync();
-
-        return Ok(new
-        {
-            activePitFormId =
-                configuration.ActivePitFormId,
-
-            activeMatchFormId =
-                configuration.ActiveMatchFormId
-        });
+        return Ok(configuration);
     }
 }

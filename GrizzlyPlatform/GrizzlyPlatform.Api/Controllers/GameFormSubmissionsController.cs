@@ -72,6 +72,7 @@ public class GameFormSubmissionsController : ControllerBase
             seasonYear = s.GameForm?.Season?.Year,
             seasonName = s.GameForm?.Season?.Name,
 
+            eventId = s.EventId ?? s.Match?.EventId,
             matchId = s.MatchId,
             matchNumber = s.Match?.MatchNumber,
 
@@ -115,6 +116,7 @@ public class GameFormSubmissionsController : ControllerBase
             gameFormId = submission.GameFormId,
             gameFormName = submission.GameForm?.Name,
 
+            eventId = submission.EventId ?? submission.Match?.EventId,
             matchId = submission.MatchId,
             matchNumber = submission.Match?.MatchNumber,
 
@@ -159,7 +161,7 @@ public async Task<IActionResult> GetSubmissionsForEvent(int eventId)
         gameFormName = s.GameForm?.Name,
         formType = s.GameForm?.FormType.ToString(),
 
-        eventId = s.Match?.EventId,
+        eventId = s.EventId ?? s.Match?.EventId,
         matchId = s.MatchId,
         matchNumber = s.Match?.MatchNumber,
         matchType = s.Match?.MatchType,
@@ -271,6 +273,7 @@ public async Task<IActionResult> GetSubmissionsForEvent(int eventId)
             gameFormId = submission.GameFormId,
             gameFormName = gameForm.Name,
 
+            eventId = submission.EventId ?? submission.Match?.EventId,
             matchId = submission.MatchId,
             matchNumber = match.MatchNumber,
 
@@ -320,6 +323,16 @@ public async Task<IActionResult> CreateScoutSubmission(
     {
         return BadRequest(
             "The specified team number does not exist.");
+    }
+
+    // Keep the event selected when the form opened, even if device defaults change.
+    if (request.EventId.HasValue)
+    {
+        var selectedEvent = await _context.Events.FindAsync(request.EventId.Value);
+        if (selectedEvent == null || selectedEvent.SeasonId != gameForm.SeasonId)
+        {
+            return BadRequest("The selected event must belong to the form's season.");
+        }
     }
 
     Match? match = null;
@@ -441,7 +454,7 @@ else
 {
     existingSubmissionQuery =
         existingSubmissionQuery.Where(s =>
-            s.MatchId == null);
+            s.MatchId == null && s.EventId == request.EventId);
 }
 
 var existingSubmission =
@@ -457,7 +470,7 @@ if (existingSubmission != null)
     {
         GameFormId = gameForm.Id,
         TeamId = team.Id,
-EventId = request.EventId,
+        EventId = request.EventId,
         MatchId = match?.Id,
         SubmittedAt = DateTime.UtcNow,
         Answers = answers
@@ -482,7 +495,7 @@ EventId = request.EventId,
         gameFormName = gameForm.Name,
         formType = gameForm.FormType.ToString(),
 
-        eventId = match?.EventId,
+        eventId = submission.EventId ?? match?.EventId,
         matchId = match?.Id,
         matchNumber = match?.MatchNumber,
         matchType = match?.MatchType,
@@ -646,5 +659,25 @@ public async Task<IActionResult> UpdateSubmission(
         })
     });
 }
+    // DELETE: api/GameFormSubmissions/clear-all
+    [HttpDelete("clear-all")]
+    public async Task<IActionResult> ClearAllSubmissions()
+    {
+        var answers = await _context.GameFormAnswers.ToListAsync();
+        _context.GameFormAnswers.RemoveRange(answers);
 
+        var submissions =
+            await _context.GameFormSubmissions.ToListAsync();
+
+        _context.GameFormSubmissions.RemoveRange(submissions);
+
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            message = "All submissions cleared.",
+            removedSubmissions = submissions.Count,
+            removedAnswers = answers.Count
+        });
+    }
 }

@@ -7,4 +7,8 @@ public class ActiveScoutingConfiguration
     public int? ActivePitFormId { get; set; }
 
     public int? ActiveMatchFormId { get; set; }
+
+    public int? ActiveSeasonId { get; set; }
+
+    public int? ActiveEventId { get; set; }
 }
