@@ -21,6 +21,8 @@ public class GameFormFieldModel
     public int DisplayOrder { get; set; }
     public bool IsSystemField { get; set; }
 
+    public bool IsAllianceSelectionFilter { get; set; }
+
     public List<GameFormFieldOptionModel> Options { get; set; } = new();
 }
 

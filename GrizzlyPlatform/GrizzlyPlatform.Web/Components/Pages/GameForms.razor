@@ -452,6 +452,12 @@
             </div>
 
             <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" disabled="@editingField.IsSystemField" @bind="editingField.IsAllianceSelectionFilter" />
+                <label class="form-check-label">Use as Alliance Selection filter</label>
+                <small class="text-muted d-block">This question will appear as a filter on the Alliance Selection page.</small>
+            </div>
+
+            <div class="form-check mb-3">
 
                 <input class="form-check-input"
                        type="checkbox"
@@ -691,7 +697,7 @@
 
       </div>
 }
-{
+
 @code {
 
     private List<GameFormModel>? gameForms;
@@ -880,21 +886,30 @@
             return;
         }
 
+        var formToSave = editingForm;
+
+        editing = false;
+        editingForm = null;
+        editingField = null;
+
+        StateHasChanged();
+        await Task.Yield();
+
         try
         {
             HttpResponseMessage response;
 
-            if (editingForm.Id == 0)
+            if (formToSave.Id == 0)
             {
                 response = await Http.PostAsJsonAsync(
                     "api/GameForms",
-                    editingForm);
+                    formToSave);
             }
             else
             {
                 response = await Http.PutAsJsonAsync(
-                    $"api/GameForms/{editingForm.Id}",
-                    editingForm);
+                    $"api/GameForms/{formToSave.Id}",
+                    formToSave);
             }
 
             if (!response.IsSuccessStatusCode)
@@ -907,9 +922,6 @@
 
                 return;
             }
-
-            editing = false;
-            editingForm = null;
 
             successMessage = "Game form saved successfully.";
 
@@ -997,6 +1009,7 @@
             Required = field.Required,
             DisplayOrder = field.DisplayOrder,
             IsSystemField = field.IsSystemField,
+            IsAllianceSelectionFilter = field.IsAllianceSelectionFilter,
             Options = field.Options
                 .Select(o => new GameFormFieldOptionModel
                 {
@@ -1067,24 +1080,36 @@ private async Task SaveField()
 
     errorMessage = null;
 
+    // Keep copies because we're closing the modal immediately.
+    var formId = editingForm.Id;
+    var fieldToSave = editingField;
+    var isNewField = newField;
+
+    // Close modal immediately when Save Field is clicked.
+    editingField = null;
+    newField = false;
+
+    StateHasChanged();
+    await Task.Yield();
+
     try
     {
-        if (newField)
+        if (isNewField)
         {
             var fieldToCreate = new
             {
-                GameFormId = editingForm.Id,
-                Question = editingField.Question,
-                Description = editingField.Description,
-                FieldType = editingField.FieldType,
-                Required = editingField.Required,
-                DisplayOrder = editingField.DisplayOrder,
+                GameFormId = formId,
+                Question = fieldToSave.Question,
+                Description = fieldToSave.Description,
+                FieldType = fieldToSave.FieldType,
+                Required = fieldToSave.Required,
+                DisplayOrder = fieldToSave.DisplayOrder,
                 IsSystemField = false
             };
 
             var response =
                 await Http.PostAsJsonAsync(
-                    $"api/GameForms/{editingForm.Id}/fields",
+                    $"api/GameForms/{formId}/fields",
                     fieldToCreate);
 
             if (!response.IsSuccessStatusCode)
@@ -1099,8 +1124,8 @@ private async Task SaveField()
         {
             var response =
                 await Http.PutAsJsonAsync(
-                    $"api/GameForms/fields/{editingField.Id}",
-                    editingField);
+                    $"api/GameForms/fields/{fieldToSave.Id}",
+                    fieldToSave);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -1111,12 +1136,8 @@ private async Task SaveField()
             }
         }
 
-        // Close the field editor immediately after a successful save.
-        editingField = null;
-
         successMessage = "Field saved successfully.";
 
-        // Reload the form after the modal has closed.
         await ReloadCurrentForm();
     }
     catch (Exception ex)
@@ -1126,7 +1147,7 @@ private async Task SaveField()
     }
 }
 
-    private async Task DeleteField(GameFormFieldModel field)
+private async Task DeleteField(GameFormFieldModel field)
     {
         var confirmed = await JS.InvokeAsync<bool>(
             "confirm",
@@ -1250,6 +1271,7 @@ private async Task SaveField()
     }
 
 }
+
 
 
 

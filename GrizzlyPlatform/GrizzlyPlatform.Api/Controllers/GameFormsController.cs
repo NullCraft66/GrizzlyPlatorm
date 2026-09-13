@@ -43,6 +43,7 @@ public class GameFormsController : ControllerBase
                         Required = f.Required,
                         DisplayOrder = f.DisplayOrder,
                         IsSystemField = f.IsSystemField,
+                        IsAllianceSelectionFilter = f.IsAllianceSelectionFilter,
 
                         Options = f.Options
                             .OrderBy(o => o.DisplayOrder)
@@ -94,6 +95,7 @@ public class GameFormsController : ControllerBase
                     Required = f.Required,
                     DisplayOrder = f.DisplayOrder,
                     IsSystemField = f.IsSystemField,
+                        IsAllianceSelectionFilter = f.IsAllianceSelectionFilter,
 
                     Options = f.Options
                         .OrderBy(o => o.DisplayOrder)
@@ -197,7 +199,7 @@ public class GameFormsController : ControllerBase
         return CreatedAtAction(
             nameof(GetGameForm),
             new { id = gameForm.Id },
-            gameForm);
+            new { gameForm.Id, gameForm.SeasonId, gameForm.Name, gameForm.Description, FormType = (int)gameForm.FormType });
     }
 
     // PUT: api/GameForms/1
@@ -230,7 +232,7 @@ public class GameFormsController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return Ok(gameForm);
+        return Ok(new { gameForm.Id, gameForm.SeasonId, gameForm.Name, gameForm.Description, FormType = (int)gameForm.FormType });
     }
 
     // POST: api/GameForms/1/fields
@@ -268,7 +270,7 @@ public class GameFormsController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return Ok(field);
+        return Ok(new { field.Id, field.GameFormId, field.Question, field.Description, FieldType = (int)field.FieldType, field.Required, field.DisplayOrder, field.IsSystemField, Options = field.Options.OrderBy(o => o.DisplayOrder).Select(o => new { o.Id, o.GameFormFieldId, o.Value, o.DisplayOrder }) });
     }
 
     // PUT: api/GameForms/fields/7
@@ -298,6 +300,7 @@ public class GameFormsController : ControllerBase
         field.FieldType = updatedField.FieldType;
         field.Required = updatedField.Required;
         field.DisplayOrder = updatedField.DisplayOrder;
+        field.IsAllianceSelectionFilter = updatedField.IsAllianceSelectionFilter;
 
         // Only Dropdown and MultiSelect fields can have options.
         if (field.FieldType != GameFormFieldType.Dropdown &&
@@ -354,7 +357,7 @@ public class GameFormsController : ControllerBase
             .Collection(f => f.Options)
             .LoadAsync();
 
-        return Ok(field);
+        return Ok(new { field.Id, field.GameFormId, field.Question, field.Description, FieldType = (int)field.FieldType, field.Required, field.DisplayOrder, field.IsSystemField, Options = field.Options.OrderBy(o => o.DisplayOrder).Select(o => new { o.Id, o.GameFormFieldId, o.Value, o.DisplayOrder }) });
     }
 
     // POST: api/GameForms/fields/7/options
@@ -389,7 +392,7 @@ public class GameFormsController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return Ok(option);
+        return Ok(new { option.Id, option.GameFormFieldId, option.Value, option.DisplayOrder });
     }
 
     // PUT: api/GameForms/fields/options/1
@@ -419,7 +422,7 @@ public class GameFormsController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        return Ok(option);
+        return Ok(new { option.Id, option.GameFormFieldId, option.Value, option.DisplayOrder });
     }
 
     // DELETE: api/GameForms/fields/7

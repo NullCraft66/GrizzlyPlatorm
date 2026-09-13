@@ -21,4 +21,7 @@ public class AlliancePick
     public string Result { get; set; } = "Pending";
 
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+
+    public string? PreviousStateJson { get; set; }
 }
+

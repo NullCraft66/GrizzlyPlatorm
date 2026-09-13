@@ -17,4 +17,6 @@ public class Event
     public string? BlueAllianceKey { get; set; }
 
     public string EventType { get; set; } = "Competition";
+
+    public int AllianceCount { get; set; } = 8;
 }

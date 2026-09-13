@@ -254,9 +254,10 @@ public class EventSyncService(GrizzlyDbContext db, TheBlueAllianceService source
         var mapped = rows.Select(r => new EventRanking { EventId = eventId, TeamId = ids[r.Number],
             Rank = r.Rank, RankingPoints = r.Points, TieBreaker1 = r.Tie1, TieBreaker2 = r.Tie2 }).ToList();
         var old = await db.EventRankings.Where(r => r.EventId == eventId).ToListAsync();
-        var required = await db.EventTeams.Where(t => t.EventId == eventId).Select(t => t.TeamId).ToListAsync();
-        Require(required.Concat(old.Select(r => r.TeamId)).All(id => mapped.Any(r => r.TeamId == id)),
-            "Rankings are incomplete. Previously saved rankings were retained.");
+        // Blue Alliance rankings are authoritative for teams that have completed ranking data.
+        // Do not reject the whole payload because a local roster contains an extra/unranked team.
+        Require(old.Select(r => r.TeamId).All(id => mapped.Any(r => r.TeamId == id)),
+            "Previously saved rankings are missing from the source response.");
         if (old.Count == mapped.Count && old.All(o => mapped.Any(n => n.TeamId == o.TeamId && n.Rank == o.Rank &&
             n.RankingPoints == o.RankingPoints && n.TieBreaker1 == o.TieBreaker1 && n.TieBreaker2 == o.TieBreaker2))) return 0;
         db.EventRankings.RemoveRange(old);

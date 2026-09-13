@@ -1,3 +1,4 @@
+using System.Text.Json;
 using GrizzlyPlatform.Api.Data;
 using GrizzlyPlatform.Api.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -386,6 +387,18 @@ if (alreadyDeclined)
     _context.AllianceMembers.Add(member);
 
     // Record which team made the pick.
+    var snapshot = new AllianceSelectionSnapshot
+    {
+        Status = selection.Status,
+        CurrentRound = selection.CurrentRound,
+        CurrentAlliance = selection.CurrentAlliance,
+        Alliances = selection.Alliances.Select(a => new AllianceSnapshot
+        {
+            AllianceNumber = a.AllianceNumber,
+            CaptainTeamId = a.CaptainTeamId,
+            MemberTeamIds = a.Members.Select(m => m.TeamId).ToList()
+        }).ToList()
+    };
     var pick = new AlliancePick
     {
         AllianceSelectionId = selection.Id,
@@ -395,7 +408,8 @@ if (alreadyDeclined)
         InvitingTeamId = alliance.CaptainTeamId,
         InvitedTeamId = team.Id,
         Result = "Accepted",
-        Timestamp = DateTime.UtcNow
+        Timestamp = DateTime.UtcNow,
+        PreviousStateJson = JsonSerializer.Serialize(snapshot)
     };
 
     _context.AlliancePicks.Add(pick);
@@ -583,6 +597,18 @@ public async Task<IActionResult> DeclineTeam(PickAllianceTeamRequest request)
 
     var selectionOrder = existingMemberCount + 1;
 
+    var snapshot = new AllianceSelectionSnapshot
+    {
+        Status = selection.Status,
+        CurrentRound = selection.CurrentRound,
+        CurrentAlliance = selection.CurrentAlliance,
+        Alliances = selection.Alliances.Select(a => new AllianceSnapshot
+        {
+            AllianceNumber = a.AllianceNumber,
+            CaptainTeamId = a.CaptainTeamId,
+            MemberTeamIds = a.Members.Select(m => m.TeamId).ToList()
+        }).ToList()
+    };
     var pick = new AlliancePick
     {
         AllianceSelectionId = selection.Id,
@@ -592,7 +618,8 @@ public async Task<IActionResult> DeclineTeam(PickAllianceTeamRequest request)
         InvitingTeamId = alliance.CaptainTeamId,
         InvitedTeamId = team.Id,
         Result = "Declined",
-        Timestamp = DateTime.UtcNow
+        Timestamp = DateTime.UtcNow,
+        PreviousStateJson = JsonSerializer.Serialize(snapshot)
     };
 
     _context.AlliancePicks.Add(pick);
@@ -616,9 +643,40 @@ public async Task<IActionResult> DeclineTeam(PickAllianceTeamRequest request)
         nextAlliance = selection.CurrentAlliance
     });
 }
-}
+
+    [HttpPost("undo")]
+    public async Task<IActionResult> UndoLastAction(UndoAllianceSelectionRequest request)
+    {
+        var selection = await _context.AllianceSelections
+            .Include(s => s.Alliances).ThenInclude(a => a.Members)
+            .Include(s => s.Picks)
+            .FirstOrDefaultAsync(s => s.Id == request.AllianceSelectionId);
+        if (selection == null) return NotFound("Alliance Selection not found.");
+        var pick = selection.Picks.OrderByDescending(p => p.Id).FirstOrDefault();
+        if (pick == null || string.IsNullOrWhiteSpace(pick.PreviousStateJson)) return BadRequest("There is no undoable action.");
+        var snapshot = JsonSerializer.Deserialize<AllianceSelectionSnapshot>(pick.PreviousStateJson);
+        if (snapshot == null) return BadRequest("The saved snapshot is invalid.");
+        foreach (var alliance in selection.Alliances)
+        {
+            var saved = snapshot.Alliances.FirstOrDefault(a => a.AllianceNumber == alliance.AllianceNumber);
+            if (saved == null) continue;
+            alliance.CaptainTeamId = saved.CaptainTeamId;
+            alliance.Members.Clear();
+            foreach (var teamId in saved.MemberTeamIds)
+                alliance.Members.Add(new AllianceMember { TeamId = teamId, SelectionRound = snapshot.CurrentRound, SelectionOrder = alliance.Members.Count + 1 });
+        }
+        selection.Status = snapshot.Status;
+        selection.CurrentRound = snapshot.CurrentRound;
+        selection.CurrentAlliance = snapshot.CurrentAlliance;
+        selection.CompletedAt = null;
+        _context.AlliancePicks.Remove(pick);
+        await _context.SaveChangesAsync();
+        return Ok(new { success = true });
+    }}
 
 
+
+public class UndoAllianceSelectionRequest { public int AllianceSelectionId { get; set; } }
 
 public class StartAllianceSelectionRequest
 {
@@ -641,6 +699,9 @@ public class PickAllianceTeamRequest
 
     public int TeamId { get; set; }
 }
+
+
+
 
 
 

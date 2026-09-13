@@ -18,6 +18,8 @@ public class GameFormField
 
     public bool IsSystemField { get; set; }
 
+    public bool IsAllianceSelectionFilter { get; set; }
+
     [System.Text.Json.Serialization.JsonIgnore]
     public GameForm? GameForm { get; set; }
 

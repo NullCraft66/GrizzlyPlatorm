@@ -20,6 +20,7 @@ public class GameFormFieldDto
     public bool Required { get; set; }
     public int DisplayOrder { get; set; }
     public bool IsSystemField { get; set; }
+    public bool IsAllianceSelectionFilter { get; set; }
 
     public List<GameFormFieldOptionDto> Options { get; set; } = new();
 }

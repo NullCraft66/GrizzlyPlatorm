@@ -122,6 +122,9 @@ namespace GrizzlyPlatform.Api.Migrations
                     b.Property<int>("PickOrder")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("PreviousStateJson")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Result")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -297,6 +300,9 @@ namespace GrizzlyPlatform.Api.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("AllianceCount")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("BlueAllianceKey")
@@ -487,6 +493,9 @@ namespace GrizzlyPlatform.Api.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("GameFormId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsAllianceSelectionFilter")
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsSystemField")

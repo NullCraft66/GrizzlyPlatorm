@@ -50,6 +50,12 @@
         </div>
 
         <div>
+            <label>Alliance Count</label>
+            <input type="number" min="1" max="32" @bind="newEvent.AllianceCount" />
+            <small>Number of alliance captains used during Alliance Selection.</small>
+        </div>
+
+        <div>
             <label>Blue Alliance Key</label>
             <input @bind="newEvent.BlueAllianceKey" />
         </div>
@@ -447,6 +453,7 @@ public async ValueTask DisposeAsync()
             Name = eventItem.Name,
             Location = eventItem.Location,
             EventType = eventItem.EventType,
+            AllianceCount = eventItem.AllianceCount,
             BlueAllianceKey = eventItem.BlueAllianceKey
         };
 
@@ -545,9 +552,10 @@ public async ValueTask DisposeAsync()
     }
 private async Task SyncNow(int eventId)
 {
-    await Http.PostAsync(
-        $"api/events/{eventId}/sync-matches",
-        null);
+    foreach (var resource in new[] { "teams", "matches", "rankings" })
+    {
+        await Http.PostAsync($"api/EventOperations/{eventId}/sync/{resource}", null);
+    }
 
     if (eventMatches.ContainsKey(eventId))
     {
@@ -707,6 +715,8 @@ public class MatchModel
 
         public string EventType { get; set; } = "Competition";
 
+        public int AllianceCount { get; set; } = 8;
+
         public string? BlueAllianceKey { get; set; }
 
         public SeasonModel? Season { get; set; }
@@ -722,3 +732,7 @@ public class MatchModel
         public string Name { get; set; } = "";
     }
 }
+
+
+
+

@@ -97,6 +97,7 @@ public class EventsController : ControllerBase
         eventItem.SeasonId = updatedEvent.SeasonId;
         eventItem.BlueAllianceKey = updatedEvent.BlueAllianceKey;
         eventItem.EventType = updatedEvent.EventType;
+        eventItem.AllianceCount = updatedEvent.AllianceCount is >= 1 and <= 32 ? updatedEvent.AllianceCount : 8;
 
         await _context.SaveChangesAsync();
 
@@ -179,4 +180,20 @@ public class EventsController : ControllerBase
         if (!await _context.Events.AnyAsync(e => e.Id == id)) return NotFound();
         return Ok(await new EventSyncService(_context, _blueAllianceService).SyncAsync(id, "matches"));
     }
+
+    [HttpPost("{id}/sync-rankings")]
+    public async Task<IActionResult> SyncRankings(int id)
+    {
+        if (!await _context.Events.AnyAsync(e => e.Id == id))
+            return NotFound();
+
+        return Ok(
+            await new EventSyncService(
+                _context,
+                _blueAllianceService
+            ).SyncAsync(id, "rankings"));
+    }
+
+
 }
+

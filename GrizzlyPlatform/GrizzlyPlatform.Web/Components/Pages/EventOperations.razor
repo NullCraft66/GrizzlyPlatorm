@@ -17,11 +17,11 @@
 {
     <fieldset disabled="@busy">
     <h2>Update status</h2>
-    <p>“Last successful check” means the source responded with usable data; it does not guarantee the source is current.</p>
+    <p>Last successful check means the source responded with usable data; it does not guarantee the source is current.</p>
     @foreach (var state in data.States)
     {
         <section class="sync-card">
-            <h3>@state.Resource — @(state.ManualMode ? "Manual • automatic updates paused" : "Automatic")</h3>
+            <h3>@state.Resource --- @(state.ManualMode ? "Manual --- automatic updates paused" : "Automatic")</h3>
             <p><strong>@state.Outcome:</strong> @state.Message</p>
             <dl>
                 <dt>Last attempt</dt><dd>@Time(state.LastAttemptAt)</dd>
@@ -56,12 +56,12 @@
             <tr><td>@match.MatchType @match.MatchNumber (set @match.SetNumber)</td>
                 <td>@string.Join(", ", match.TeamNumbers.Take(3))</td>
                 <td>@string.Join(", ", match.TeamNumbers.Skip(3))</td>
-                <td>@match.RedScore – @match.BlueScore</td>
+                <td>@match.RedScore --- @match.BlueScore</td>
                 <td><button disabled="@editing" @onclick="() => Edit(match)">Edit</button></td></tr>
         }
         </tbody>
     </table>
-    <h3>@(draft.Id == 0 ? "Add match" : "Edit match")</h3>
+    <h3>@(draft.Id == 0 ? "Add match" : "Edit match")</h3><button type="button" @onclick="NewMatch" disabled="@busy">New blank match</button>
     <label>Type <select @bind="draft.MatchType" @bind:after="DirtyMatch">
         <option>Qualification</option><option>EighthFinal</option><option>Quarterfinal</option><option>Semifinal</option><option>Final</option>
     </select></label>
@@ -74,7 +74,7 @@
             <label>@(i < 3 ? "Red" : "Blue") @(i % 3 + 1)
                 <select @bind="draft.TeamNumbers[position]" @bind:after="DirtyMatch">
                     <option value="0">Select team</option>
-                    @foreach (var t in data.Teams) { <option value="@t.TeamNumber">@t.TeamNumber — @t.Name</option> }
+                    @foreach (var t in data.Teams) { <option value="@t.TeamNumber">@t.TeamNumber --- @t.Name</option> }
                 </select>
             </label>
         }
@@ -90,9 +90,9 @@
         {
             var index = i;
             var team = data.Teams.First(t => t.Id == order[index]);
-            <li>@team.TeamNumber — @team.Name
-                <button aria-label="@($"Move team {team.TeamNumber} up")" disabled="@(index == 0)" @onclick="() => Move(index, -1)">↑</button>
-                <button aria-label="@($"Move team {team.TeamNumber} down")" disabled="@(index == order.Count - 1)" @onclick="() => Move(index, 1)">↓</button>
+            <li>@team.TeamNumber --- @team.Name
+                <button aria-label="@($"Move team {team.TeamNumber} up")" disabled="@(index == 0)" @onclick="() => Move(index, -1)">Up</button>
+                <button aria-label="@($"Move team {team.TeamNumber} down")" disabled="@(index == order.Count - 1)" @onclick="() => Move(index, 1)">Down</button>
             </li>
         }
     </ol>
@@ -176,12 +176,15 @@
         draft.Revision = State("matches").Revision;
         return Send(() => Http.PutAsJsonAsync($"api/EventOperations/{selected}/matches", draft), "Match saved; match updates paused.");
     }
+    private void NewMatch() { draft = new MatchEdit(); DirtyMatch(); }
     private void Edit(MatchEdit match)
     {
         draft = new() { Id = match.Id, MatchType = match.MatchType, MatchNumber = match.MatchNumber,
             SetNumber = match.SetNumber, TeamNumbers = match.TeamNumbers.ToArray(), RedScore = match.RedScore, BlueScore = match.BlueScore };
         DirtyMatch();
     }
+    private void SetRank(int index, string? value) { if (!int.TryParse(value, out var target) || target < 1 || target > order.Count || target == index + 1) return; var team = order[index]; order.RemoveAt(index); order.Insert(target - 1, team); editing = true; editSection = "rankings"; }
+
     private void Move(int index, int direction)
     {
         (order[index], order[index + direction]) = (order[index + direction], order[index]);

@@ -43,6 +43,11 @@ public class EventRankingsController : ControllerBase
             })
             .ToListAsync();
 
+        if (rankings.Count == 0) {
+            var roster = await _context.EventTeams.Where(t => t.EventId == eventId).Include(t => t.Team).OrderBy(t => t.Team!.TeamNumber).ToListAsync();
+            return Ok(roster.Select((t, i) => new { Id = 0, t.EventId, t.TeamId, teamNumber = t.Team!.TeamNumber, teamName = t.Team.Name, Rank = i + 1, RankingPoints = 0, TieBreaker1 = (double?)null, TieBreaker2 = (double?)null }));
+        }
+
         return Ok(rankings);
     }
 

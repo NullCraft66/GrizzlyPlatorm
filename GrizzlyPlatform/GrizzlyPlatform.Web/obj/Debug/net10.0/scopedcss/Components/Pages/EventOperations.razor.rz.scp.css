@@ -1,0 +1,8 @@
+.sync-card[b-rfh8r38znu] { border: 1px solid #adb5bd; border-radius: .5rem; padding: 1rem; margin: 1rem 0; }
+label[b-rfh8r38znu] { display: inline-flex; flex-direction: column; margin: .4rem; gap: .25rem; }
+button[b-rfh8r38znu] { margin: .25rem; }
+dt[b-rfh8r38znu] { font-weight: 600; }
+dd[b-rfh8r38znu] { margin-bottom: .4rem; }
+fieldset[b-rfh8r38znu] { min-width: 0; }
+.table[b-rfh8r38znu] { display: block; overflow-x: auto; }
+li[b-rfh8r38znu] { padding: .25rem; }

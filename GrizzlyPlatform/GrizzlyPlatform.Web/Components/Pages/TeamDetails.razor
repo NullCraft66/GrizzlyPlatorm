@@ -480,8 +480,7 @@ else
             }
 
             totalScore += isRed
-                ? match.RedScore
-                : match.BlueScore;
+                ? (match.RedScore ?? 0) : (match.BlueScore ?? 0);
 
             scoredMatches++;
         }
@@ -515,8 +514,7 @@ else
             }
 
             totalScore += isRed
-                ? match.RedScore
-                : match.BlueScore;
+                ? (match.RedScore ?? 0) : (match.BlueScore ?? 0);
         }
 
         return totalScore;
@@ -581,8 +579,8 @@ else
         public int MatchNumber { get; set; }
         public int SetNumber { get; set; }
 
-        public int RedScore { get; set; }
-        public int BlueScore { get; set; }
+        public int? RedScore { get; set; }
+        public int? BlueScore { get; set; }
 
         public string? WinningAlliance { get; set; }
 

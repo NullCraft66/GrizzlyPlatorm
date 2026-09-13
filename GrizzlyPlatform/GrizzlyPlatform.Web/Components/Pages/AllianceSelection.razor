@@ -4,6 +4,7 @@
 @rendermode InteractiveServer
 @using GrizzlyPlatform.Web.Models
 @inject HttpClient Http
+@inject Microsoft.JSInterop.IJSRuntime JS
 <PageTitle>Alliance Selection</PageTitle>
 
 <h1>Alliance Selection</h1>
@@ -12,6 +13,11 @@
     <div class="alert alert-danger" role="alert">@errorMessage</div>
 }
 <button class="btn btn-secondary mb-3" disabled="@(loading || saving || planDirty)" @onclick="Reload">Refresh</button>
+@if (selection != null)
+{
+    <button class="btn btn-warning mb-3 ms-2" disabled="@(loading || saving || planDirty)" @onclick="UndoLastAction">Undo Last Action</button>
+    <button class="btn btn-danger mb-3 ms-2" disabled="@(loading || saving || planDirty)" @onclick="ResetSelection">Reset Alliance Selection</button>
+}
 @if (selection?.Status == "InProgress")
 {
     <div class="alert alert-info" role="status">
@@ -65,10 +71,10 @@
         <section class="top-eight-section">
             <div class="section-header">
                 <div>
-                    <h2>Top 8 Alliance Captains</h2>
+                    <h2>Top @AllianceCount Alliance Captains</h2>
                     <p>
                         These teams are the current alliance captains,
-                        ranked 1 through 8.
+                        ranked 1 through @AllianceCount.
                     </p>
                 </div>
 
@@ -76,7 +82,7 @@
                 {
                     <button type="button"
                             @onclick="StartSelection"
-                            disabled="@(topEight.Count != 8 || saving || loadFailed)">
+                            disabled="@(topEight.Count != AllianceCount || saving || loadFailed)">
                         Start Alliance Selection
                     </button>
                 }
@@ -362,6 +368,7 @@ else if (field.FieldType == 1)
 @code {
     private List<EventModel> events = new();
     private List<AllianceTeamModel> topEight = new();
+    private int AllianceCount => events.FirstOrDefault(e => e.Id == selectedEventId)?.AllianceCount ?? 8;
     private List<AllianceTeamModel> filteredTeams = new();
     private AllianceSelectionModel? selection;
     private int selectedEventId;
@@ -432,7 +439,7 @@ else if (field.FieldType == 1)
             TeamId = r.TeamId, TeamNumber = r.TeamNumber, TeamName = r.TeamName, Rank = r.Rank
         }).ToList();
         topEight = selection == null
-            ? filteredTeams.Take(8).ToList()
+            ? filteredTeams.Take(AllianceCount).ToList()
             : selection.Alliances.OrderBy(a => a.AllianceNumber).Select(a => new AllianceTeamModel
             {
                 TeamId = a.CaptainTeamId, TeamNumber = a.CaptainTeamNumber ?? 0,
@@ -460,7 +467,7 @@ else if (field.FieldType == 1)
     {
         scoutingFilters.Clear();
         scoutingFields = pitForms.FirstOrDefault(f => f.Id == selectedPitFormId)?.Fields
-            .Where(f => !f.IsSystemField && f.FieldType >= 1 && f.FieldType <= 5)
+            .Where(f => f.IsAllianceSelectionFilter && !f.IsSystemField && f.FieldType >= 1 && f.FieldType <= 5)
             .OrderBy(f => f.DisplayOrder).Select(f => new ScoutingFieldModel
             {
                 Id = f.Id, Question = f.Question, FieldType = f.FieldType,
@@ -509,14 +516,34 @@ else if (field.FieldType == 1)
             captain.AllianceNumber > selection.CurrentAlliance && captain.Members.Count == 0);
     }
 
+    private async Task UndoLastAction()
+    {
+        if (selection == null || saving) return;
+        await SaveAction("undo", new { AllianceSelectionId = selection.Id });
+    }
+
+    private async Task ResetSelection()
+    {
+        if (selection == null || saving) return;
+        if (!await JS.InvokeAsync<bool>("confirm", "Reset this Alliance Selection? This cannot be undone.")) return;
+        saving = true;
+        try
+        {
+            using var response = await Http.DeleteAsync($"api/AllianceSelection/{selection.Id}");
+            if (!response.IsSuccessStatusCode) errorMessage = await response.Content.ReadAsStringAsync();
+            await LoadAllianceSelection();
+        }
+        finally { saving = false; }
+    }
     private async Task StartSelection()
     {
-        if (saving || loadFailed || topEight.Count != 8 || selection != null) return;
+        if (saving || loadFailed || topEight.Count != AllianceCount || selection != null) return;
         await SaveAction("start", new StartAllianceSelectionRequest
         {
             EventId = selectedEventId,
             TeamIds = topEight.OrderBy(t => t.Rank).Select(t => t.TeamId).ToList(),
-            RankedTeamIds = filteredTeams.OrderBy(t => t.Rank).Select(t => t.TeamId).ToList()
+            RankedTeamIds = filteredTeams.OrderBy(t => t.Rank).Select(t => t.TeamId).ToList(),
+            ManualMode = !filteredTeams.Any()
         });
     }
 
@@ -684,6 +711,7 @@ private class ScoutingAnswerModel
         public int EventId { get; set; }
         public List<int> TeamIds { get; set; } = new();
         public List<int> RankedTeamIds { get; set; } = new();
+        public bool ManualMode { get; set; }
     }
 
     private class PickAllianceTeamRequest
@@ -724,4 +752,21 @@ private class ScoutingAnswerModel
 
 
 
-}
+
+    private class EventTeamFallbackModel
+    {
+        public int Id { get; set; }
+        public int EventId { get; set; }
+        public int TeamId { get; set; }
+        public EventTeamFallbackTeamModel Team { get; set; } = new();
+    }
+
+    private class EventTeamFallbackTeamModel
+    {
+        public int Id { get; set; }
+        public int TeamNumber { get; set; }
+        public string Name { get; set; } = "";
+    }}
+
+
+
