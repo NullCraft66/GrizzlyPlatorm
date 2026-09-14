@@ -3,7 +3,10 @@
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">GrizzlyPlatform.Web</a>
+        <a class="navbar-brand grizzly-brand" href="">
+    <img src="images/grizzly-logo.png" alt="Grizzly Robotics logo" />
+    <span>Grizzly Robotics</span>
+</a>
     </div>
 </div>
 
@@ -49,22 +52,6 @@ else
     </div>
 }
 
-            <div class="nav-item px-3">
-                <button class="btn btn-outline-light w-100"
-                        @onclick="Logout">
-                    Logout
-                </button>
-            </div>
-        }
-        else
-        {
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="login">
-                    <span class="bi bi-box-arrow-in-right"
-                          aria-hidden="true"></span> Login
-                </NavLink>
-            </div>
-        }
 
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
@@ -147,3 +134,8 @@ else
         Navigation.NavigateTo("/login");
     }
 }
+
+
+
+
+

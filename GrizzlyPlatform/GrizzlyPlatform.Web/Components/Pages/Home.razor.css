@@ -1,17 +1,21 @@
- .dashboard { max-width: 1180px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
-.dashboard-hero { display:flex; justify-content:space-between; align-items:flex-end; gap:2rem; padding:2.5rem; border-radius:1.25rem; background:linear-gradient(135deg,#182b49,#2f65b0); color:white; box-shadow:0 18px 42px rgba(21,46,83,.2); }
-.eyebrow { margin:0 0 .5rem; text-transform:uppercase; letter-spacing:.14em; font-size:.75rem; font-weight:700; opacity:.75; }
-.dashboard h1 { margin:0; font-size:clamp(2.2rem,5vw,4rem); letter-spacing:-.04em; }
-.dashboard .lead { margin:1rem 0 0; font-size:1.1rem; opacity:.86; }
-.hero-action,.dashboard-button { display:inline-flex; align-items:center; justify-content:center; border-radius:.65rem; padding:.75rem 1rem; font-weight:700; text-decoration:none; }
-.hero-action { background:white; color:#183057; white-space:nowrap; }
-.dashboard-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; margin-top:1.25rem; }
-.dashboard-card { min-height:170px; padding:1.35rem; border:1px solid #e2e8f0; border-radius:1rem; background:#fff; box-shadow:0 8px 22px rgba(15,23,42,.06); }
-.card-heading { display:flex; align-items:center; gap:.65rem; }
-.card-heading h2 { margin:0; font-size:1.1rem; color:#24344d; }
-.card-icon { display:grid; place-items:center; width:2rem; height:2rem; border-radius:.55rem; background:#e7efff; color:#3264b4; font-size:1.2rem; }
-.number { margin:1.4rem 0 .2rem; color:#182b49; font-size:2.2rem; font-weight:750; line-height:1.1; }
-.card-caption { color:#64748b; margin-top:.35rem; }
-.dashboard-card p { color:#64748b; }
-.dashboard-button { margin-top:1rem; background:#3264b4; color:white; }
-@media(max-width:700px){ .dashboard { padding:1.25rem .9rem 3rem; } .dashboard-hero { align-items:flex-start; flex-direction:column; padding:1.5rem; } .hero-action { width:100%; } .dashboard-grid { grid-template-columns:1fr; } }
+.grizzly-home {
+    min-height: calc(100vh - 4rem);
+    box-sizing: border-box;
+    padding: clamp(1.5rem, 4vh, 3rem) 1rem;
+    background: #cdb65a;
+    text-align: center;
+    overflow: auto;
+}
+
+.home-logo-wrap { display: flex; justify-content: center; margin: 0 auto .35rem; }
+.home-logo { width: min(310px, 43vh, 72vw); height: auto; object-fit: contain; }
+.grizzly-home h1 { margin: .1rem 0 0; color: #211e20; font-size: clamp(1.4rem, 3vw, 2.2rem); font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.home-tagline { color: #211e20; font-size: .95rem; margin: .25rem 0 1.25rem; }
+.dashboard-grid { max-width: 920px; margin: 0 auto; padding: 1rem; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; border: 2px solid #211e20; border-radius: 10px; background: rgba(255,255,255,.13); box-shadow: 0 10px 24px rgba(33,30,32,.16); }
+.dashboard-card { position: relative; background: #fffdf4; border: 0; border-top: 6px solid #211e20; border-radius: 8px; padding: 1.25rem 1rem; min-width: 0; box-shadow: 0 4px 12px rgba(33,30,32,.12); }
+.dashboard-card h2 { color: #6d5820; font-size: .8rem; letter-spacing: .1em; text-transform: uppercase; margin: 0 0 .6rem; }
+.dashboard-card p { margin-bottom: .35rem; }
+.dashboard-card .number { color: #211e20; font-size: 1.35rem; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dashboard-button { display: inline-block; margin-top: .65rem; color: #fffdf4; background: #211e20; border: 0; border-radius: 5px; padding: .55rem 1rem; text-decoration: none; font-weight: 700; }
+.dashboard-button:hover { background: #6d5820; color: #fffdf4; }
+@media (max-width: 700px) { .dashboard-grid { grid-template-columns: 1fr; max-width: 420px; } }

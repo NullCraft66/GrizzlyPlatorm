@@ -3,7 +3,7 @@
     cursor: pointer;
     width: 3.5rem;
     height: 2.5rem;
-    color: white;
+    color: #f8f5ec;
     position: absolute;
     top: 0.5rem;
     right: 1rem;
@@ -60,7 +60,7 @@
     }
 
     .nav-item ::deep .nav-link {
-        color: #d7d7d7;
+        color: rgba(248, 245, 236, .78);
         background: none;
         border: none;
         border-radius: 4px;
@@ -72,13 +72,13 @@
     }
 
 .nav-item ::deep a.active {
-    background-color: rgba(255,255,255,0.37);
-    color: white;
+    background-color: rgba(198, 166, 72, .22);
+    color: #f8f5ec;
 }
 
 .nav-item ::deep .nav-link:hover {
     background-color: rgba(255,255,255,0.1);
-    color: white;
+    color: #f8f5ec;
 }
 
 .nav-scrollable {
@@ -103,3 +103,8 @@
         overflow-y: auto;
     }
 }
+
+
+.nav-scrollable, nav { overflow-x: hidden !important; }
+.nav-item, .nav-link { max-width: 100%; overflow: hidden; }
+.nav-link { white-space: nowrap; text-overflow: ellipsis; }

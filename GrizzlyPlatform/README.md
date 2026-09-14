@@ -2,6 +2,18 @@
 
 GrizzlyPlatform is the shared backend and admin dashboard for scouting.
 
+## Downloads and installation
+
+The easiest way to get started is to download the latest package from the repository's **Releases** page:
+
+- **Windows desktop app:** download the `GrizzlyRoboticsPlatform-win-x64` package, extract it, and run `GrizzlyPlatform.Desktop.exe`.
+- **Android scouting app:** download the GrizzlyScout APK and install it on the scouting phones.
+- **Windows installation guide:** [WINDOWS_INSTALLATION.md](WINDOWS_INSTALLATION.md)
+- **GrizzlyScout Android installation guide:** [GrizzlyScout/INSTALLATION.md](../GrizzlyScout/INSTALLATION.md)
+
+The Windows app starts the API and web dashboard automatically. Android devices connect to the host computer over the local network using the host computer's IPv4 address.
+
+> For normal team distribution, attach the Windows ZIP and Android APK to a GitHub Release so users can find them at the top of the repository.
 ## Project roles
 
 - `GrizzlyPlatform.Api` is the server and database API. This is the source of truth for seasons, events, teams, matches, scouting forms, and submissions.
@@ -51,3 +63,4 @@ Example body:
 
 The API resolves the internal match and team IDs from the event, match number, match type, set number, and team number.
 If the form has fields named `Team Number` or `Match Number`, the API automatically fills those answers from the top-level request values when the app does not send them separately.
+

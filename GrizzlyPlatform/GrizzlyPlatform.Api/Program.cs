@@ -7,7 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Register Entity Framework Core with SQLite.
 builder.Services.AddDbContext<GrizzlyDbContext>(options =>
-    options.UseSqlite("Data Source=grizzlyplatform.db"));
+    options.UseSqlite(builder.Configuration.GetConnectionString("Default") ?? "Data Source=grizzlyplatform.db"));
 builder.Services.AddScoped<AuthService>();
 
 builder.Services.AddHttpClient<TheBlueAllianceService>(client =>
@@ -78,3 +78,4 @@ app.UseCors("ScoutingClients");
 app.MapControllers();
 
 app.Run();
+

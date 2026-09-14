@@ -1,10 +1,13 @@
 {
   "version": 2,
-  "dgSpecHash": "arToHRtGWTg=",
+  "dgSpecHash": "+/de97c6WD4=",
   "success": true,
   "projectFilePath": "C:\\YCSRobotics\\GrizzlyPlatorm\\GrizzlyPlatform\\GrizzlyPlatform.Web\\GrizzlyPlatform.Web.csproj",
   "expectedPackageFiles": [
-    "C:\\Users\\NullC\\.nuget\\packages\\microsoft.aspnetcore.app.internal.assets\\10.0.11\\microsoft.aspnetcore.app.internal.assets.10.0.11.nupkg.sha512"
+    "C:\\Users\\NullC\\.nuget\\packages\\microsoft.aspnetcore.app.internal.assets\\10.0.11\\microsoft.aspnetcore.app.internal.assets.10.0.11.nupkg.sha512",
+    "C:\\Users\\NullC\\.nuget\\packages\\microsoft.netcore.app.runtime.win-x64\\10.0.11\\microsoft.netcore.app.runtime.win-x64.10.0.11.nupkg.sha512",
+    "C:\\Users\\NullC\\.nuget\\packages\\microsoft.windowsdesktop.app.runtime.win-x64\\10.0.11\\microsoft.windowsdesktop.app.runtime.win-x64.10.0.11.nupkg.sha512",
+    "C:\\Users\\NullC\\.nuget\\packages\\microsoft.aspnetcore.app.runtime.win-x64\\10.0.11\\microsoft.aspnetcore.app.runtime.win-x64.10.0.11.nupkg.sha512"
   ],
   "logs": []
 }

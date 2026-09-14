@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("GrizzlyPlatform.Web")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+5a9b3153632f3c509fafa2dc406a3b2aa8618148")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f39e2c28ff94cc0428ba1aacfb8cbed5f186766b")]
 [assembly: System.Reflection.AssemblyProductAttribute("GrizzlyPlatform.Web")]
 [assembly: System.Reflection.AssemblyTitleAttribute("GrizzlyPlatform.Web")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

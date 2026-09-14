@@ -1,0 +1,180 @@
+css
+.team-details[b-fvd3stddsv] {
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.event-card[b-fvd3stddsv] {
+    margin-bottom: 15px;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+.team-data-card[b-fvd3stddsv] {
+    display: flex;
+    gap: 30px;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+}
+
+.team-data-card p[b-fvd3stddsv] {
+    margin: 0;
+    padding: 12px 18px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+.event-selector[b-fvd3stddsv] {
+    margin-bottom: 20px;
+}
+
+.event-selector label[b-fvd3stddsv] {
+    display: block;
+    margin-bottom: 8px;
+}
+
+.event-selector select[b-fvd3stddsv] {
+    width: 100%;
+    max-width: 500px;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #bbb;
+    font-size: 1rem;
+}
+
+.selected-event[b-fvd3stddsv] {
+    margin-bottom: 20px;
+}
+
+.team-match-card[b-fvd3stddsv] {
+    margin-bottom: 20px;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+}
+
+.match-header[b-fvd3stddsv] {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.match-header h4[b-fvd3stddsv] {
+    margin-bottom: 12px;
+}
+
+.match-score[b-fvd3stddsv] {
+    font-size: 1.4rem;
+    margin: 8px 0;
+}
+
+.red-score[b-fvd3stddsv] {
+    color: #d32f2f;
+    font-weight: bold;
+}
+
+.blue-score[b-fvd3stddsv] {
+    color: #1976d2;
+    font-weight: bold;
+}
+
+.match-result[b-fvd3stddsv] {
+    font-size: 1.1rem;
+    margin: 8px 0 0;
+}
+
+.result-win[b-fvd3stddsv] {
+    font-weight: bold;
+}
+
+.result-loss[b-fvd3stddsv] {
+    font-weight: bold;
+}
+
+.result-not-played[b-fvd3stddsv] {
+    font-weight: normal;
+}
+
+.match-alliances[b-fvd3stddsv] {
+    display: flex;
+    justify-content: space-between;
+    gap: 40px;
+}
+
+.alliance[b-fvd3stddsv] {
+    flex: 1;
+    min-width: 0;
+}
+
+.alliance h5[b-fvd3stddsv] {
+    margin-bottom: 12px;
+    font-size: 1.1rem;
+}
+
+.alliance-red[b-fvd3stddsv] {
+    text-align: left;
+}
+
+.alliance-blue[b-fvd3stddsv] {
+    text-align: right;
+}
+
+.team-list[b-fvd3stddsv] {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.match-team[b-fvd3stddsv] {
+    padding: 8px 0;
+}
+
+.alliance-blue .match-team[b-fvd3stddsv] {
+    text-align: right;
+}
+
+.team-number[b-fvd3stddsv] {
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.team-name[b-fvd3stddsv] {
+    margin-left: 6px;
+}
+
+.current-team[b-fvd3stddsv] {
+    font-weight: bold;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+}
+
+.current-team .team-number[b-fvd3stddsv] {
+    font-weight: 800;
+}
+
+.no-event-selected[b-fvd3stddsv] {
+    margin-top: 20px;
+    font-style: italic;
+}
+
+button[b-fvd3stddsv] {
+    margin-top: 10px;
+}
+
+@media (max-width: 700px) {
+    .match-alliances[b-fvd3stddsv] {
+        gap: 15px;
+    }
+
+    .team-name[b-fvd3stddsv] {
+        display: block;
+        margin-left: 0;
+    }
+
+    .alliance-blue .team-name[b-fvd3stddsv] {
+        margin-right: 0;
+    }
+}
+
+
