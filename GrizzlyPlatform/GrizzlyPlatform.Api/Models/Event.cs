@@ -19,4 +19,9 @@ public class Event
     public string EventType { get; set; } = "Competition";
 
     public int AllianceCount { get; set; } = 8;
+
+    public DateTime? StartDate { get; set; }
+
+    public DateTime? EndDate { get; set; }
 }
+

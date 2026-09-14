@@ -29,25 +29,25 @@ public class EventTeamsController : ControllerBase
 
                 eventInfo = new
                 {
-                    id = et.Event.Id,
-                    name = et.Event.Name,
-                    location = et.Event.Location,
+                    id = et.Event!.Id,
+                    name = et.Event!.Name,
+                    location = et.Event!.Location,
 
-                    season = et.Event.Season == null
+                    season = et.Event!.Season == null
                         ? null
                         : new
                         {
-                            id = et.Event.Season.Id,
-                            year = et.Event.Season.Year,
-                            name = et.Event.Season.Name
+                            id = et.Event!.Season.Id,
+                            year = et.Event!.Season.Year,
+                            name = et.Event!.Season.Name
                         }
                 },
                 team = new
                 {
-                    id = et.Team.Id,
-                    teamNumber = et.Team.TeamNumber,
-                    name = et.Team.Name,
-                    location = et.Team.Location
+                    id = et.Team!.Id,
+                    teamNumber = et.Team!.TeamNumber,
+                    name = et.Team!.Name,
+                    location = et.Team!.Location
                 }
             })
             .ToListAsync();
@@ -68,10 +68,10 @@ public class EventTeamsController : ControllerBase
 
                 team = new
                 {
-                    id = et.Team.Id,
-                    teamNumber = et.Team.TeamNumber,
-                    name = et.Team.Name,
-                    location = et.Team.Location
+                    id = et.Team!.Id,
+                    teamNumber = et.Team!.TeamNumber,
+                    name = et.Team!.Name,
+                    location = et.Team!.Location
                 }
             })
             .ToListAsync();
@@ -126,3 +126,4 @@ public class EventTeamsController : ControllerBase
         return NoContent();
     }
 }
+

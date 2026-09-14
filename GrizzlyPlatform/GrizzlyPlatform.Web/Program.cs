@@ -12,6 +12,8 @@ builder.Services.AddScoped(sp => new HttpClient
 });
 // Authentication state
 builder.Services.AddScoped<AuthState>();
+// Shared event channel for cross-page developer easter eggs.
+builder.Services.AddScoped<EasterEggService>();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
@@ -37,5 +39,7 @@ app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.Run();
+
+
 
 

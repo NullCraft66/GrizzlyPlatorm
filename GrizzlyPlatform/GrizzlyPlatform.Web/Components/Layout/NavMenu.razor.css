@@ -108,3 +108,53 @@
 .nav-scrollable, nav { overflow-x: hidden !important; }
 .nav-item, .nav-link { max-width: 100%; overflow: hidden; }
 .nav-link { white-space: nowrap; text-overflow: ellipsis; }
+
+/* Centered platform branding with a reserved logo slot. */
+.top-row {
+    min-height: 6.5rem;
+    padding: 0.75rem !important;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.top-row .container-fluid {
+    display: flex;
+    justify-content: center;
+    padding: 0 !important;
+}
+.navbar-brand.grizzly-brand {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    margin: 0;
+    text-align: center;
+    overflow: hidden;
+}
+.grizzly-brand .brand-image-slot {
+    display: block;
+    width: 2.75rem;
+    height: 2.75rem;
+    flex: 0 0 2.75rem;
+    object-fit: contain;
+    border-radius: 0.4rem;
+}
+.grizzly-brand span:last-child {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    color: #cdb65a !important;
+    font-size: 1.05rem;
+    font-weight: 900;
+    letter-spacing: .08em;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-transform: none;
+}
+
+

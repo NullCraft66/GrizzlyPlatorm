@@ -1,9 +1,11 @@
 @inherits LayoutComponentBase
+@implements IDisposable
+@inject GrizzlyPlatform.Web.Services.EasterEggService EasterEggs
 
-<div class="app-shell">
+<div class="app-shell @(konamiTheme ? "konami-theme" : "")" tabindex="0" @onkeydown="HandleSecretKey">
     <header class="app-header">
         <button class="menu-button" aria-label="Toggle navigation" @onclick="ToggleNavigation"><span></span><span></span><span></span></button>
-        <span class="app-title">Grizzly Robotics</span>
+        <button class="app-title app-title-button" @onclick="RevealEasterEgg">GrizzlyPlatform</button>
         <span class="app-subtitle">Scouting Platform</span>
     </header>
 
@@ -16,13 +18,87 @@
             <div class="drawer-backdrop" @onclick="CloseNavigation"></div>
         }
         <main>
-            <article class="content">
-                @Body
-            </article>
+            <article class="content">@Body</article>
         </main>
     </div>
 </div>
 
+@if (easterEggVisible)
+{
+    <div class="easter-egg" role="dialog" aria-label="Project credits">
+        <div class="easter-egg-card">
+            <img class="easter-egg-logo" src="images/kiwi-bear.png" alt="Kiwi bear" />
+            <p>This was drawn by Keirstin Williams for our button design during the 2026 REBUILT season.</p>
+            <button class="btn" @onclick="CloseEasterEgg">Close</button>
+        </div>
+    </div>
+}
+
+@if (jokeVisible)
+{
+    <div class="easter-egg" role="dialog" aria-label="Scouting joke">
+        <div class="easter-egg-card">
+            <div class="easter-egg-title">SCOUTING JOKE</div>
+            <p>@currentJoke</p>
+            <button class="btn" @onclick="CloseJoke">Close</button>
+        </div>
+    </div>
+}
+
+@if (creditsVisible)
+{
+    <div class="easter-egg" role="dialog" aria-label="General project credits">
+        <div class="easter-egg-card">
+            <div class="easter-egg-title">GENERAL CREDITS</div>
+            <p>GrizzlyPlatform was built for Grizzly Robotics scouting operations.</p>
+            <p>Built by Eph Kis with contributions from the Grizzly Robotics team.</p>
+            <p>Button artwork: Keirstin Williams.</p>
+            <p>Season: 2026 REBUILT.</p>
+            <button class="btn" @onclick="CloseCredits">Close</button>
+        </div>
+    </div>
+}
+
+@if (motivationVisible)
+{
+    <div class="easter-egg" role="dialog" aria-label="Motivational message">
+        <div class="easter-egg-card">
+            <div class="easter-egg-title">SCOUTING BOOST</div>
+            <p>@currentMotivation</p>
+            <button class="btn" @onclick="CloseMotivation">Close</button>
+        </div>
+    </div>
+}
+@if (developerVisible)
+{
+    <div class="easter-egg" role="dialog" aria-label="Developer information">
+        <div class="easter-egg-card">
+            <div class="easter-egg-title">DEVELOPER PANEL</div>
+            <div class="developer-panel-grid">
+                <p><strong>Application:</strong> GrizzlyPlatform</p>
+                <p><strong>Team:</strong> Grizzly Robotics</p>
+                <p><strong>Creator:</strong> Eph Kis</p>
+                <p><strong>Season build:</strong> 2026 REBUILT</p>
+                <p><strong>Environment:</strong> @EnvironmentName</p>
+                <p><strong>Platform:</strong> @PlatformName</p>
+                <p><strong>Runtime:</strong> @RuntimeName</p>
+                <p><strong>Opened:</strong> @OpenedAt</p>
+            </div>
+            <hr />
+            <div class="developer-panel-grid">
+                <p><strong>Build version:</strong> @BuildVersion</p>
+                <p><strong>GitHub commit:</strong> @GitHubCommit</p>
+                <p><strong>Desktop publish:</strong> @DesktopPublishNumber</p>
+                <p><strong>Host IP:</strong> @HostIpAddress</p>
+                <p><strong>Network:</strong> @NetworkName</p>
+                <p><strong>Connected devices:</strong> @ConnectedDevices</p>
+            </div>
+            <p><strong>GitHub:</strong> <a href="@GitHubRepository" target="_blank">@GitHubRepository</a></p>
+            <p class="developer-credit">Built by Eph Kis for Grizzly Robotics.</p>
+            <button class="btn" @onclick="CloseDeveloperPanel">Close</button>
+        </div>
+    </div>
+}
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.
     <a href="." class="reload">Reload</a>
@@ -31,8 +107,138 @@
 
 @code {
     private bool navigationOpen;
+    private int titleClicks;
+    private bool easterEggVisible;
+    private bool jokeVisible;
+    private bool developerVisible;
+    private bool creditsVisible;
+    private bool motivationVisible;
+    private bool konamiTheme;
+    private string currentMotivation = string.Empty;
+    private string konamiBuffer = string.Empty;
+    private string currentJoke = string.Empty;
+    private string secretBuffer = string.Empty;
+    private string EnvironmentName => "Desktop/LAN";
+    private string PlatformName => System.Runtime.InteropServices.RuntimeInformation.OSDescription;
+    private string RuntimeName => System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription;
+    private string OpenedAt => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+    private string GitHubCommit => "ce5b765";
+    private string DesktopPublishNumber => "1";
+    private string BuildVersion => $"1.{GitHubCommit}.{DesktopPublishNumber}";
+    private string GitHubRepository => "https://github.com/NullCraft66/GrizzlyPlatorm";
+    private string NetworkName => "LAN";
+    private string ConnectedDevices => "1 (current session)";
+    private string HostIpAddress => GetHostIpAddress();
+
+    private static string GetHostIpAddress()
+    {
+        try
+        {
+            return System.Net.Dns.GetHostEntry(System.Net.Dns.GetHostName()).AddressList
+                .FirstOrDefault(address => address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork && !System.Net.IPAddress.IsLoopback(address))?.ToString()
+                ?? "127.0.0.1";
+        }
+        catch
+        {
+            return "Unavailable";
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        EasterEggs.DeveloperPanelRequested += ShowDeveloperPanel;
+    }
+
+    private void ShowDeveloperPanel()
+    {
+        _ = InvokeAsync(() =>
+        {
+            developerVisible = true;
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose()
+    {
+        EasterEggs.DeveloperPanelRequested -= ShowDeveloperPanel;
+    }
+
     private void ToggleNavigation() => navigationOpen = !navigationOpen;
     private void CloseNavigation() => navigationOpen = false;
+
+    private void RevealEasterEgg()
+    {
+        titleClicks++;
+        if (titleClicks >= 5)
+        {
+            easterEggVisible = true;
+            titleClicks = 0;
+        }
+    }
+
+    private void CloseEasterEgg() => easterEggVisible = false;
+    private void CloseJoke() => jokeVisible = false;
+    private void CloseDeveloperPanel() => developerVisible = false;
+    private void CloseCredits() => creditsVisible = false;
+    private void CloseMotivation() => motivationVisible = false;
+
+    private void HandleSecretKey(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs args)
+    {
+        if (args.CtrlKey && args.ShiftKey && string.Equals(args.Key, "C", StringComparison.OrdinalIgnoreCase))
+        {
+            creditsVisible = true;
+            return;
+        }
+
+        konamiBuffer = (konamiBuffer + "," + args.Key).TrimStart(',');
+        if (konamiBuffer.Length > 80) konamiBuffer = konamiBuffer[^80..];
+        if (konamiBuffer.EndsWith("ArrowUp,ArrowUp,ArrowDown,ArrowDown,ArrowLeft,ArrowRight,ArrowLeft,ArrowRight,b,a", StringComparison.OrdinalIgnoreCase))
+        {
+            _ = ActivateKonamiTheme();
+            konamiBuffer = string.Empty;
+        }
+
+        if (string.IsNullOrWhiteSpace(args.Key) || args.Key.Length != 1) return;
+        secretBuffer = (secretBuffer + args.Key.ToLowerInvariant());
+        if (secretBuffer.Length > 8) secretBuffer = secretBuffer[^8..];
+        if (secretBuffer == "jokes")
+        {
+            currentJoke = Jokes[Random.Shared.Next(Jokes.Length)];
+            jokeVisible = true;
+            secretBuffer = string.Empty;
+        }
+        if (secretBuffer == "motivate")
+        {
+            currentMotivation = Motivations[Random.Shared.Next(Motivations.Length)];
+            motivationVisible = true;
+            secretBuffer = string.Empty;
+        }
+    }
+
+    private async Task ActivateKonamiTheme()
+    {
+        konamiTheme = true;
+        await InvokeAsync(StateHasChanged);
+        await Task.Delay(TimeSpan.FromSeconds(10));
+        konamiTheme = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private static readonly string[] Motivations =
+    {
+        "Every data point helps your alliance make a better decision.",
+        "Scout carefully, communicate clearly, and trust your preparation.",
+        "Small observations can become a championship-winning advantage.",
+        "You are not just collecting numbers—you are helping your team understand the match."
+    };
+
+    private static readonly string[] Jokes =
+    {
+        "Why did the scout bring a ladder? To reach the top of the rankings.",
+        "Scouting: because guessing is not a strategy.",
+        "What is a robot's favorite kind of music? Algo-rhythm.",
+        "A good scout never loses track of the data—or the snack table."
+    };
 }
 
 

@@ -454,6 +454,8 @@ public async ValueTask DisposeAsync()
             Location = eventItem.Location,
             EventType = eventItem.EventType,
             AllianceCount = eventItem.AllianceCount,
+            StartDate = eventItem.StartDate,
+            EndDate = eventItem.EndDate,
             BlueAllianceKey = eventItem.BlueAllianceKey
         };
 
@@ -717,6 +719,10 @@ public class MatchModel
 
         public int AllianceCount { get; set; } = 8;
 
+        public DateTime? StartDate { get; set; }
+
+        public DateTime? EndDate { get; set; }
+
         public string? BlueAllianceKey { get; set; }
 
         public SeasonModel? Season { get; set; }
@@ -732,6 +738,8 @@ public class MatchModel
         public string Name { get; set; } = "";
     }
 }
+
+
 
 
 

@@ -1,0 +1,9 @@
+.secret-video-overlay{position:fixed;inset:0;z-index:2000;display:grid;place-items:center;padding:1rem;background:rgba(0,0,0,.82)}
+.secret-video-card{width:min(560px,96vw);padding:1.25rem;border:2px solid #d2b84c;border-radius:12px;background:#211e20;color:#f6f0df;text-align:center;box-shadow:0 1rem 3rem rgba(0,0,0,.45)}
+.secret-video-title{margin-bottom:1rem;color:#d2b84c;font-weight:700;letter-spacing:.12em}
+.secret-video-gif{display:block;width:min(480px,100%);max-height:320px;object-fit:contain;margin:0 auto 1rem;background:white}
+.secret-video-audio{display:block;width:100%;margin:0 auto 1rem}
+.magic-word-label{display:block;margin-bottom:.4rem;color:#f6f0df}
+.magic-word-input{margin-bottom:.75rem;text-align:center}
+.magic-word-button{min-width:140px}
+.magic-word-error{margin:.75rem 0 0;color:#ff9b9b}

@@ -98,6 +98,8 @@ public class EventsController : ControllerBase
         eventItem.BlueAllianceKey = updatedEvent.BlueAllianceKey;
         eventItem.EventType = updatedEvent.EventType;
         eventItem.AllianceCount = updatedEvent.AllianceCount is >= 1 and <= 32 ? updatedEvent.AllianceCount : 8;
+        eventItem.StartDate = updatedEvent.StartDate;
+        eventItem.EndDate = updatedEvent.EndDate;
 
         await _context.SaveChangesAsync();
 
@@ -196,4 +198,6 @@ public class EventsController : ControllerBase
 
 
 }
+
+
 

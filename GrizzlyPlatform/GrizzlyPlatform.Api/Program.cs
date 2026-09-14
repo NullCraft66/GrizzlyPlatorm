@@ -41,6 +41,9 @@ var app = builder.Build();
 // Create the initial admin account if one does not exist.
 using (var scope = app.Services.CreateScope())
 {
+    var db = scope.ServiceProvider.GetRequiredService<GrizzlyDbContext>();
+    await db.Database.MigrateAsync();
+
     var authService = scope.ServiceProvider
         .GetRequiredService<AuthService>();
 
@@ -78,4 +81,5 @@ app.UseCors("ScoutingClients");
 app.MapControllers();
 
 app.Run();
+
 

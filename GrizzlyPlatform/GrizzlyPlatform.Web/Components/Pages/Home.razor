@@ -16,7 +16,12 @@
     }
     else
     {
-        <div class="dashboard-grid">
+        @if (events.Any(IsCompetitionDay))
+    {
+        <div class="competition-message">Good luck at competition today, Grizzly Robotics!</div>
+    }
+
+    <div class="dashboard-grid">
 
             <div class="dashboard-card">
                 <h2>Events</h2>
@@ -29,10 +34,10 @@
             <div class="dashboard-card">
                 <h2>Current Season</h2>
 
-                @if (events.Count > 0 && events[0].Season != null)
+                @if (events.Count > 0 && events[0].Season is not null)
                 {
-                    <p class="number">@events[0].Season.Name</p>
-                    <p>@events[0].Season.Year</p>
+                    <p class="number">@events[0].Season!.Name</p>
+                    <p>@events[0].Season!.Year</p>
                 }
                 else
                 {
@@ -61,6 +66,14 @@
 @code {
     private List<EventModel>? events;
 
+    private static bool IsCompetitionDay(EventModel eventItem)
+    {
+        var today = DateTime.Today;
+        return eventItem.StartDate.HasValue && eventItem.EndDate.HasValue
+            && today >= eventItem.StartDate.Value.Date
+            && today <= eventItem.EndDate.Value.Date;
+    }
+
     protected override async Task OnInitializedAsync()
     {
         events = await Http.GetFromJsonAsync<List<EventModel>>(
@@ -74,6 +87,8 @@
         public string Name { get; set; } = "";
         public string Location { get; set; } = "";
         public string? BlueAllianceKey { get; set; }
+        public DateTime? StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
         public SeasonModel? Season { get; set; }
     }
 
@@ -84,4 +99,7 @@
         public string Name { get; set; } = "";
     }
 }
+
+
+
 

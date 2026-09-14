@@ -8,6 +8,9 @@ namespace GrizzlyPlatform.Desktop;
 public partial class Form1 : Form
 {
     private readonly WebView2 webView = new();
+    private readonly Panel loadingPanel = new();
+    private readonly Label loadingLabel = new();
+    private readonly PictureBox loadingLogo = new();
     private Process? apiProcess;
     private Process? webProcess;
     private readonly JsonElement settings;
@@ -18,9 +21,38 @@ public partial class Form1 : Form
         settings = LoadSettings();
         TrySetAppIcon();
         WindowState = FormWindowState.Maximized;
+
         webView.Dock = DockStyle.Fill;
-        Controls.Add(webView);
-        Shown += async (_, _) => await StartServicesAsync();
+        webView.Visible = false;
+        webView.NavigationCompleted += (_, _) =>
+        {
+            loadingPanel.Visible = false;
+            webView.Visible = true;
+        };
+
+        loadingPanel.Dock = DockStyle.Fill;
+        loadingPanel.BackColor = Color.FromArgb(205, 182, 90);
+        loadingLabel.AutoSize = false;
+        loadingLabel.Size = new Size(620, 100);
+        loadingLabel.Text = "GRIZZLY ROBOTICS" + Environment.NewLine + Environment.NewLine + "Starting platform services...";
+        loadingLabel.ForeColor = Color.FromArgb(33, 30, 32);
+        loadingLabel.Font = new Font("Segoe UI", 18, FontStyle.Bold);
+        loadingLabel.TextAlign = ContentAlignment.MiddleCenter;
+
+        var logoPath = Path.Combine(AppContext.BaseDirectory, "images", "loading-pulse.gif");
+        if (File.Exists(logoPath))
+        {
+            loadingLogo.Image = Image.FromFile(logoPath);
+            loadingLogo.Size = new Size(220, 220);
+            loadingLogo.SizeMode = PictureBoxSizeMode.Zoom;
+            loadingLogo.BackColor = Color.Transparent;
+            loadingPanel.Controls.Add(loadingLogo);
+        }
+        loadingPanel.Controls.Add(loadingLabel);
+        loadingPanel.Resize += (_, _) => LayoutLoadingControls();
+        LayoutLoadingControls();Controls.Add(webView);
+        Controls.Add(loadingPanel);
+        Shown += async (_, _) => await StartServicesSafelyAsync();
         FormClosing += (_, _) => StopServices();
     }
 
@@ -38,11 +70,33 @@ public partial class Form1 : Form
     {
         try
         {
-            var path = Path.Combine(AppContext.BaseDirectory, "images", "grizzly-app-icon.png");
-            if (!File.Exists(path)) path = Path.Combine(FindProjectRoot(), "GrizzlyPlatform.Web", "wwwroot", "images", "grizzly-app-icon.png");
+            var path = Path.Combine(AppContext.BaseDirectory, "images", "kiwi-bear.png");
+            if (!File.Exists(path)) path = Path.Combine(FindProjectRoot(), "GrizzlyPlatform.Desktop", "kiwi-bear.png");
             if (File.Exists(path)) using (var bitmap = new Bitmap(path)) Icon = Icon.FromHandle(bitmap.GetHicon());
         }
         catch { }
+    }
+
+    private void LayoutLoadingControls()
+    {
+        loadingLogo.Location = new Point(
+            Math.Max(0, (loadingPanel.ClientSize.Width - loadingLogo.Width) / 2),
+            Math.Max(20, (loadingPanel.ClientSize.Height - 300) / 2));
+        loadingLabel.Location = new Point(
+            Math.Max(0, (loadingPanel.ClientSize.Width - loadingLabel.Width) / 2),
+            loadingLogo.Bottom + 18);
+    }
+    private async Task StartServicesSafelyAsync()
+    {
+        try
+        {
+            await StartServicesAsync();
+        }
+        catch (Exception ex)
+        {
+            loadingLabel.Text = "GRIZZLY ROBOTICS" + Environment.NewLine + Environment.NewLine + "Unable to start the platform." + Environment.NewLine + Environment.NewLine + ex.Message;
+            loadingLabel.ForeColor = Color.FromArgb(120, 25, 25);
+        }
     }
 
     private async Task StartServicesAsync()
@@ -58,15 +112,50 @@ public partial class Form1 : Form
         var webBrowser = Setting("WebUrl", "http://127.0.0.1:5273");
         var database = Setting("DatabasePath", "grizzlyplatform.db");
 
-        apiProcess = File.Exists(apiExe)
-            ? StartExecutable(apiExe, $"--urls {apiListen}", Path.GetDirectoryName(apiExe)!)
-            : StartDotnet(apiProject, $"--urls {apiListen}", Path.GetDirectoryName(apiProject)!);
-        webProcess = File.Exists(webExe)
-            ? StartExecutable(webExe, $"--urls {webListen} --ApiBaseUrl={apiBrowser}/", Path.GetDirectoryName(webExe)!)
-            : StartDotnet(webProject, $"--urls {webListen} --ApiBaseUrl={apiBrowser}/", Path.GetDirectoryName(webProject)!);
-        apiProcess.StartInfo.Environment["ConnectionStrings__Default"] = $"Data Source={database}";
+        var apiHealthUrl = $"{apiBrowser}/api/health";
+        if (!await IsServiceReadyAsync(apiHealthUrl))
+        {
+            var apiArguments = $"--urls {apiListen} --ConnectionStrings:Default=\"Data Source={database}\"";
+            apiProcess = File.Exists(apiExe)
+                ? StartExecutable(apiExe, apiArguments, Path.GetDirectoryName(apiExe)!)
+                : StartDotnet(apiProject, apiArguments, Path.GetDirectoryName(apiProject)!);
+            await WaitForServiceAsync(apiHealthUrl);
+        }
+
+        if (!await IsServiceReadyAsync(webBrowser))
+        {
+            var webArguments = $"--urls {webListen} --ApiBaseUrl={apiBrowser}/";
+            webProcess = File.Exists(webExe)
+                ? StartExecutable(webExe, webArguments, Path.GetDirectoryName(webExe)!)
+                : StartDotnet(webProject, webArguments, Path.GetDirectoryName(webProject)!);
+            await WaitForServiceAsync(webBrowser);
+        }
+
         await webView.EnsureCoreWebView2Async();
         webView.Source = new Uri(webBrowser);
+    }
+
+    private static async Task<bool> IsServiceReadyAsync(string url)
+    {
+        try
+        {
+            var endpoint = new Uri(url);
+            using var client = new System.Net.Sockets.TcpClient();
+            await client.ConnectAsync(endpoint.Host, endpoint.Port);
+            return client.Connected;
+        }
+        catch (System.Net.Sockets.SocketException) { return false; }
+        catch (UriFormatException) { return false; }
+    }
+
+    private static async Task WaitForServiceAsync(string url)
+    {
+        for (var attempt = 0; attempt < 40; attempt++)
+        {
+            if (await IsServiceReadyAsync(url)) return;
+            await Task.Delay(250);
+        }
+        throw new InvalidOperationException($"Service did not become ready: {url}");
     }
 
     private static Process StartDotnet(string project, string arguments, string workingDirectory) =>
@@ -98,4 +187,11 @@ public partial class Form1 : Form
         }
     }
 }
+
+
+
+
+
+
+
 

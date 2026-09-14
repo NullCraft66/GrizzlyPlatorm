@@ -410,8 +410,8 @@ public class GameFormsController : ControllerBase
             return NotFound();
         }
 
-        if (option.GameFormField.FieldType != GameFormFieldType.Dropdown &&
-            option.GameFormField.FieldType != GameFormFieldType.MultiSelect)
+        if (option.GameFormField!.FieldType != GameFormFieldType.Dropdown &&
+            option.GameFormField!.FieldType != GameFormFieldType.MultiSelect)
         {
             return BadRequest(
                 "Options can only belong to Dropdown or MultiSelect fields.");
@@ -538,3 +538,4 @@ public class GameFormsController : ControllerBase
         return Ok(new { message = "System fields restored." });
     }
 }
+

@@ -5,6 +5,11 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+      <AssemblyCompany>Grizzly Robotics</AssemblyCompany>
+    <AssemblyProduct>GrizzlyPlatform</AssemblyProduct>
+    <AssemblyCopyright>Built by Eph Kis</AssemblyCopyright>
   </PropertyGroup>
 
 </Project>
+
+

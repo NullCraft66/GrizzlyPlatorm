@@ -20,3 +20,12 @@ article.content { width: 100%; max-width: 1500px; margin: 0 auto; padding: 2rem 
 .navigation-drawer { max-width: 100vw; overflow-x: hidden; }
 .navigation-drawer .top-row { overflow: hidden; }
 .navigation-drawer .navbar-brand { max-width: 100%; overflow: hidden; white-space: nowrap; }
+
+.app-title-button { border: 0; padding: 0; background: transparent; color: #cdb65a; cursor: pointer; }
+.easter-egg { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: rgba(33,30,32,.65); }
+.easter-egg-card { min-width: 18rem; padding: 2rem; text-align: center; background: #fffdf4; border: 3px solid #211e20; border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,.35); color: #211e20; }
+.easter-egg-title { color: #8b6d17; font-weight: 900; letter-spacing: .08em; }
+.easter-egg-card .btn { background: #211e20; color: #cdb65a; border: 0; padding: .5rem 1rem; border-radius: 5px; }
+.easter-egg-logo { display: block; width: min(18rem, 80vw); height: min(18rem, 45vh); object-fit: contain; margin: 0 auto 1rem; }
+.developer-panel-grid{text-align:left;display:grid;grid-template-columns:1fr 1fr;gap:.2rem .8rem}.developer-panel-grid p{margin:.15rem 0}.developer-feature-list{text-align:left;margin-bottom:1rem}.developer-feature-list code{color:#d2b84c}.developer-credit{font-size:.9rem;color:#d2b84c}
+.konami-theme{animation:konami-pulse .8s infinite alternate;background:linear-gradient(135deg,#261447,#104d4d,#6d3217)!important}.konami-theme .app-header{background:#160d2e;color:#7fffd4}.konami-theme .menu-button span{background:#7fffd4}@keyframes konami-pulse{from{filter:hue-rotate(0deg)}to{filter:hue-rotate(55deg)}}
