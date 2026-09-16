@@ -1,11 +1,16 @@
 package com.ycsrobotics.grizzlyscout.Api;
 
+import android.content.Context;
+import android.content.SharedPreferences;
+
 public final class ApiConfig {
-
-    // Android Emulator -> API running on this computer.
-    public static final String BASE_URL =
-            "http://10.0.2.2:5263/api/";
-
-    private ApiConfig() {
-    }
+    private static final String PREFS = "developer_settings";
+    private static final String KEY_BASE_URL = "api_base_url";
+    private static final String DEFAULT_BASE_URL = "http://10.20.118.4:5263/api/";
+    private static SharedPreferences preferences;
+    private ApiConfig() { }
+    public static void initialize(Context context) { preferences = context.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE); }
+    public static String getBaseUrl() { return preferences == null ? DEFAULT_BASE_URL : preferences.getString(KEY_BASE_URL, DEFAULT_BASE_URL); }
+    public static void setBaseUrl(String value) { if (preferences != null) preferences.edit().putString(KEY_BASE_URL, normalize(value)).apply(); }
+    private static String normalize(String value) { String result = value.trim(); if (!result.endsWith("/")) result += "/"; if (!result.endsWith("api/")) result += "api/"; return result; }
 }

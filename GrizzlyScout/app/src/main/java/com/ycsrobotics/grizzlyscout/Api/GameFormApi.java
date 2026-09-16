@@ -1,11 +1,10 @@
 package com.ycsrobotics.grizzlyscout.Api;
 
-import android.util.Log;
-
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -15,491 +14,166 @@ import java.nio.charset.StandardCharsets;
 
 public final class GameFormApi {
 
+    private static final int TIMEOUT_MILLIS = 10_000;
+
     private GameFormApi() {
     }
 
-    public static JSONObject getGameForm(int formId)
-            throws Exception {
-
-        URL url = new URL(
-                ApiConfig.BASE_URL +
-                "GameForms/" +
-                formId
-        );
-
-        HttpURLConnection connection =
-                (HttpURLConnection) url.openConnection();
-
-        connection.setRequestMethod("GET");
-        connection.setConnectTimeout(10000);
-        connection.setReadTimeout(10000);
-
-        int responseCode =
-                connection.getResponseCode();
-
-        InputStream stream =
-                responseCode >= 200 &&
-                responseCode < 300
-                        ? connection.getInputStream()
-                        : connection.getErrorStream();
-
-        String response =
-                readResponse(stream);
-
-        if (responseCode < 200 ||
-                responseCode >= 300) {
-
-            throw new Exception(
-                    "API error " +
-                    responseCode +
-                    ": " +
-                    response
-            );
-        }
-
-        return new JSONObject(response);
+    public static JSONObject getGameForm(int formId) throws Exception {
+        return getObject("GameForms/" + formId);
     }
 
-    public static JSONArray getGameForms()
-            throws Exception {
-
-        URL url = new URL(
-                ApiConfig.BASE_URL +
-                "GameForms"
-        );
-
-        HttpURLConnection connection =
-                (HttpURLConnection) url.openConnection();
-
-        connection.setRequestMethod("GET");
-        connection.setConnectTimeout(10000);
-        connection.setReadTimeout(10000);
-
-        int responseCode =
-                connection.getResponseCode();
-
-        InputStream stream =
-                responseCode >= 200 &&
-                responseCode < 300
-                        ? connection.getInputStream()
-                        : connection.getErrorStream();
-
-        String response =
-                readResponse(stream);
-
-        if (responseCode < 200 ||
-                responseCode >= 300) {
-
-            throw new Exception(
-                    "API error " +
-                    responseCode +
-                    ": " +
-                    response
-            );
-        }
-
-        return new JSONArray(response);
+    public static JSONArray getGameForms() throws Exception {
+        return getArray("GameForms");
     }
 
-   public static JSONArray getSubmissions()
-        throws Exception {
+    public static JSONObject getActiveScoutingConfiguration() throws Exception {
+        return getObject("ActiveScoutingConfiguration");
+    }
 
-    URL url = new URL(
-            ApiConfig.BASE_URL +
-            "GameFormSubmissions"
-    );
+    public static JSONObject getEventsObject() throws Exception {
+        return getObject("Events");
+    }
 
-    HttpURLConnection connection =
-            (HttpURLConnection) url.openConnection();
+    public static JSONArray getEvents() throws Exception {
+        return getArray("Events");
+    }
 
-    connection.setRequestMethod("GET");
-    connection.setConnectTimeout(10000);
-    connection.setReadTimeout(10000);
+    public static JSONArray getMatchesForEvent(int eventId) throws Exception {
+        return getArray("Matches/event/" + eventId);
+    }
 
-    int responseCode =
-            connection.getResponseCode();
+    public static JSONArray getSubmissions() throws Exception {
+        return getArray("GameFormSubmissions");
+    }
 
-    InputStream stream =
-            responseCode >= 200 &&
-            responseCode < 300
+    public static JSONObject getSubmission(int submissionId) throws Exception {
+        return getObject("GameFormSubmissions/" + submissionId);
+    }
+
+    public static JSONObject updateSubmission(int submissionId, JSONObject submission)
+            throws Exception {
+        return sendObject("PUT", "GameFormSubmissions/" + submissionId, submission);
+    }
+
+    public static JSONObject submitSubmission(JSONObject submission) throws Exception {
+        return sendObject("POST", "GameFormSubmissions/scout", submission);
+    }
+
+    public static JSONObject getAlliancePlan(int eventId) throws Exception {
+        return getObject("AlliancePlans/event/" + eventId);
+    }
+
+    public static JSONObject suggestAllianceTeam(int eventId, JSONObject suggestion) throws Exception {
+        return sendObject("POST", "AlliancePlans/event/" + eventId + "/suggestions", suggestion);
+    }
+
+    public static final class EventSelection {
+        public final JSONArray events;
+        public final boolean preset;
+
+        private EventSelection(JSONArray events, boolean preset) {
+            this.events = events;
+            this.preset = preset;
+        }
+    }
+
+    public static EventSelection getEventSelection(int formId) throws Exception {
+        JSONObject configuration = getActiveScoutingConfiguration();
+        int seasonId = getGameForm(formId).getInt("seasonId");
+        int activeSeasonId = configuration.optInt("activeSeasonId", 0);
+        int activeEventId = configuration.optInt("activeEventId", 0);
+        if (activeSeasonId > 0 && activeSeasonId != seasonId) {
+            throw new Exception("This form is not in the active season. Reopen scouting to load the current form.");
+        }
+
+        JSONArray availableEvents = getEvents();
+        JSONArray matchingEvents = new JSONArray();
+        for (int i = 0; i < availableEvents.length(); i++) {
+            JSONObject event = availableEvents.getJSONObject(i);
+            if (event.optInt("seasonId", 0) == seasonId &&
+                    (activeEventId <= 0 || event.optInt("id", 0) == activeEventId)) {
+                matchingEvents.put(event);
+            }
+        }
+        if (activeEventId > 0 && matchingEvents.length() == 0) {
+            throw new Exception("The active event is unavailable for this form. Check Device Configuration on the site.");
+        }
+        return new EventSelection(matchingEvents, activeEventId > 0);
+    }
+
+    private static JSONObject getObject(String endpoint) throws Exception {
+        return new JSONObject(request("GET", endpoint, null));
+    }
+
+    private static JSONArray getArray(String endpoint) throws Exception {
+        String response = request("GET", endpoint, null).trim();
+        if (response.startsWith("[")) {
+            return new JSONArray(response);
+        }
+
+        JSONObject object = new JSONObject(response);
+        if (object.has("value")) {
+            return object.getJSONArray("value");
+        }
+        if (object.has("Value")) {
+            return object.getJSONArray("Value");
+        }
+        throw new Exception("API response did not contain an array.");
+    }
+
+    private static JSONObject sendObject(String method, String endpoint, JSONObject body)
+            throws Exception {
+        return new JSONObject(request(method, endpoint, body));
+    }
+
+    private static String request(String method, String endpoint, JSONObject body)
+            throws IOException {
+        URL url = new URL(ApiConfig.getBaseUrl() + endpoint);
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        try {
+            connection.setRequestMethod(method);
+            connection.setConnectTimeout(TIMEOUT_MILLIS);
+            connection.setReadTimeout(TIMEOUT_MILLIS);
+
+            if (body != null) {
+                connection.setDoOutput(true);
+                connection.setRequestProperty("Content-Type", "application/json");
+                connection.setRequestProperty("Accept", "application/json");
+                byte[] requestBody = body.toString().getBytes(StandardCharsets.UTF_8);
+                try (OutputStream output = connection.getOutputStream()) {
+                    output.write(requestBody);
+                }
+            }
+
+            int responseCode = connection.getResponseCode();
+            boolean successful = responseCode >= 200 && responseCode < 300;
+            InputStream stream = successful
                     ? connection.getInputStream()
                     : connection.getErrorStream();
-
-    String response =
-            readResponse(stream);
-
-    Log.e(
-            "GrizzlyScout",
-            "Submissions response: " +
-                    response
-    );
-
-    if (responseCode < 200 ||
-            responseCode >= 300) {
-
-        throw new Exception(
-                "API error " +
-                responseCode +
-                ": " +
-                response
-        );
-    }
-
-    String trimmedResponse =
-            response.trim();
-
-    if (trimmedResponse.startsWith("[")) {
-
-        return new JSONArray(
-                trimmedResponse
-        );
-    }
-
-    JSONObject object =
-            new JSONObject(
-                    trimmedResponse
-            );
-
-    return object.getJSONArray(
-            "value"
-    );
-}
-
-public static JSONObject getSubmission(
-        int submissionId)
-        throws Exception {
-
-    URL url = new URL(
-            ApiConfig.BASE_URL +
-            "GameFormSubmissions/" +
-            submissionId
-    );
-
-    HttpURLConnection connection =
-            (HttpURLConnection) url.openConnection();
-
-    connection.setRequestMethod("GET");
-    connection.setConnectTimeout(10000);
-    connection.setReadTimeout(10000);
-
-    int responseCode =
-            connection.getResponseCode();
-
-    InputStream stream =
-            responseCode >= 200 &&
-            responseCode < 300
-                    ? connection.getInputStream()
-                    : connection.getErrorStream();
-
-    String response =
-            readResponse(stream);
-
-    if (responseCode < 200 ||
-            responseCode >= 300) {
-
-        throw new Exception(
-                "API error " +
-                responseCode +
-                ": " +
-                response
-        );
-    }
-
-    return new JSONObject(
-            response
-    );
-}
-
-    public static JSONObject updateSubmission(
-            int submissionId,
-            JSONObject submission)
-            throws Exception {
-
-        URL url = new URL(
-                ApiConfig.BASE_URL +
-                "GameFormSubmissions/" +
-                submissionId
-        );
-
-        HttpURLConnection connection =
-                (HttpURLConnection) url.openConnection();
-
-        connection.setRequestMethod("PUT");
-        connection.setConnectTimeout(10000);
-        connection.setReadTimeout(10000);
-        connection.setDoOutput(true);
-
-        connection.setRequestProperty(
-                "Content-Type",
-                "application/json"
-        );
-
-        connection.setRequestProperty(
-                "Accept",
-                "application/json"
-        );
-
-        byte[] body =
-                submission
-                        .toString()
-                        .getBytes(
-                                StandardCharsets.UTF_8
-                        );
-
-        try (
-                OutputStream output =
-                        connection.getOutputStream()
-        ) {
-
-            output.write(body);
-            output.flush();
+            String response = readResponse(stream);
+            if (!successful) {
+                throw new IOException("API error " + responseCode + ": " + response);
+            }
+            return response;
+        } finally {
+            connection.disconnect();
         }
-
-        int responseCode =
-                connection.getResponseCode();
-
-        InputStream stream =
-                responseCode >= 200 &&
-                responseCode < 300
-                        ? connection.getInputStream()
-                        : connection.getErrorStream();
-
-        String response =
-                readResponse(stream);
-
-        Log.e(
-                "GrizzlyScout",
-                "Update submission response code: " +
-                        responseCode +
-                        "\nResponse: " +
-                        response
-        );
-
-        if (responseCode < 200 ||
-                responseCode >= 300) {
-
-            throw new Exception(
-                    "API error " +
-                    responseCode +
-                    ": " +
-                    response
-            );
-        }
-
-        return new JSONObject(
-                response
-        );
     }
 
-
-    public static JSONObject submitSubmission(
-            JSONObject submission)
-            throws Exception {
-
-        URL url = new URL(
-                ApiConfig.BASE_URL +
-                "GameFormSubmissions/scout"
-        );
-
-        HttpURLConnection connection =
-                (HttpURLConnection) url.openConnection();
-
-        connection.setRequestMethod("POST");
-        connection.setConnectTimeout(10000);
-        connection.setReadTimeout(10000);
-        connection.setDoOutput(true);
-
-        connection.setRequestProperty(
-                "Content-Type",
-                "application/json"
-        );
-
-        connection.setRequestProperty(
-                "Accept",
-                "application/json"
-        );
-
-        byte[] body =
-                submission
-                        .toString()
-                        .getBytes(
-                                StandardCharsets.UTF_8
-                        );
-
-        try (
-                OutputStream output =
-                        connection.getOutputStream()
-        ) {
-
-            output.write(body);
-            output.flush();
-        }
-
-        int responseCode =
-                connection.getResponseCode();
-
-        InputStream stream =
-                responseCode >= 200 &&
-                responseCode < 300
-                        ? connection.getInputStream()
-                        : connection.getErrorStream();
-
-        String response =
-                readResponse(stream);
-
-        Log.e(
-                "GrizzlyScout",
-                "Submission response code: " +
-                responseCode +
-                "\nResponse: " +
-                response
-        );
-
-        if (responseCode < 200 ||
-                responseCode >= 300) {
-
-            throw new Exception(
-                    "API error " +
-                    responseCode +
-                    ": " +
-                    response
-            );
-        }
-
-        return new JSONObject(response);
-    }
-
-    public static JSONArray getEvents()
-            throws Exception {
-
-        URL url = new URL(
-                ApiConfig.BASE_URL +
-                "Events"
-        );
-
-        HttpURLConnection connection =
-                (HttpURLConnection) url.openConnection();
-
-        connection.setRequestMethod("GET");
-        connection.setConnectTimeout(10000);
-        connection.setReadTimeout(10000);
-
-        int responseCode =
-                connection.getResponseCode();
-
-        InputStream stream =
-                responseCode >= 200 &&
-                responseCode < 300
-                        ? connection.getInputStream()
-                        : connection.getErrorStream();
-
-        String response =
-                readResponse(stream);
-
-        if (responseCode < 200 ||
-                responseCode >= 300) {
-
-            throw new Exception(
-                    "API error " +
-                    responseCode +
-                    ": " +
-                    response
-            );
-        }
-
-       String trimmedResponse =
-        response.trim();
-
-if (trimmedResponse.startsWith("[")) {
-
-    return new JSONArray(
-            trimmedResponse
-    );
-}
-
-JSONObject object =
-        new JSONObject(
-                trimmedResponse
-        );
-
-return object.getJSONArray(
-        "value"
-);
-    }
-
-    public static JSONArray getMatchesForEvent(
-            int eventId)
-            throws Exception {
-
-        URL url = new URL(
-                ApiConfig.BASE_URL +
-                "Matches/event/" +
-                eventId
-        );
-
-        HttpURLConnection connection =
-                (HttpURLConnection) url.openConnection();
-
-        connection.setRequestMethod("GET");
-        connection.setConnectTimeout(10000);
-        connection.setReadTimeout(10000);
-
-        int responseCode =
-                connection.getResponseCode();
-
-        InputStream stream =
-                responseCode >= 200 &&
-                responseCode < 300
-                        ? connection.getInputStream()
-                        : connection.getErrorStream();
-
-        String response =
-                readResponse(stream);
-
-        if (responseCode < 200 ||
-                responseCode >= 300) {
-
-            throw new Exception(
-                    "API error " +
-                    responseCode +
-                    ": " +
-                    response
-            );
-        }
-
-        return new JSONArray(
-                response
-        );
-    }
-
-    private static String readResponse(
-            InputStream stream)
-            throws Exception {
-
+    private static String readResponse(InputStream stream) throws IOException {
         if (stream == null) {
             return "";
         }
 
-        BufferedReader reader =
-                new BufferedReader(
-                        new InputStreamReader(stream)
-                );
-
-        StringBuilder builder =
-                new StringBuilder();
-
-        String line;
-
-        while (
-                (line = reader.readLine())
-                        != null
-        ) {
-
-            builder.append(line);
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+            StringBuilder builder = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                builder.append(line);
+            }
+            return builder.toString();
         }
-
-        reader.close();
-
-        return builder.toString();
     }
 }

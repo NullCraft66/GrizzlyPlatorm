@@ -1,15 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
+
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     tools:showIn="navigation_view">
 
     <group android:checkableBehavior="single">
+
+        <item
+            android:id="@+id/nav_home"
+            android:title="Home" />
+
         <item
             android:id="@+id/scout_new_team"
-            android:title="@string/scout_new_team"  />
+            android:title="@string/scout_new_team" />
+
         <item
             android:id="@+id/edit_existing_team"
             android:title="@string/edit_existing_team" />
+
+        <item android:id="@+id/nav_alliance_plan" android:title="Alliance Plan" />
+        <item android:id="@+id/nav_api_settings" android:title="Developer API Settings" />
     </group>
 
 </menu>

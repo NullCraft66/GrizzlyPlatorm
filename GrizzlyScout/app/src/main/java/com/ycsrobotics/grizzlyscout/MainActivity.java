@@ -38,6 +38,7 @@ public class MainActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        com.ycsrobotics.grizzlyscout.Api.ApiConfig.initialize(getApplicationContext());
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
@@ -108,20 +109,69 @@ public class MainActivity extends AppCompatActivity
         transaction.commit();
     }
 
-    @Override
+   @Override
 public boolean onNavigationItemSelected(MenuItem item) {
+
     int id = item.getItemId();
 
-    if (id == R.id.scout_new_team) {
-        Log.i(getString(R.string.app_name), "Scout New Team option has been selected");
-        showFragment(new EditTeamFragment());
+    if (id == R.id.nav_home) {
+
+        Log.i(
+                getString(R.string.app_name),
+                "Home option has been selected"
+        );
+
+        showFragment(
+                new HomePageFragment()
+        );
+
+        } else if (id == R.id.nav_api_settings) {
+        final android.widget.EditText pin = new android.widget.EditText(this);
+        pin.setInputType(2 | 16);
+        new androidx.appcompat.app.AlertDialog.Builder(this).setTitle("Developer Access").setMessage("Enter developer PIN").setView(pin).setNegativeButton("Cancel", null).setPositiveButton("Unlock", (d,w) -> {
+            if (BuildConfig.DEV_API_PIN.equals(pin.getText().toString())) {
+                final android.widget.EditText input = new android.widget.EditText(this);
+                input.setSingleLine(true);
+                input.setText(com.ycsrobotics.grizzlyscout.Api.ApiConfig.getBaseUrl());
+                new androidx.appcompat.app.AlertDialog.Builder(this).setTitle("Developer API Settings").setMessage("Enter the host API address").setView(input).setNegativeButton("Cancel", null).setPositiveButton("Save", (d2,w2) -> com.ycsrobotics.grizzlyscout.Api.ApiConfig.setBaseUrl(input.getText().toString())).show();
+            } else {
+                android.widget.Toast.makeText(this, "Incorrect developer PIN", android.widget.Toast.LENGTH_SHORT).show();
+            }
+        }).show();
+    } else if (id == R.id.nav_alliance_plan) {
+        showFragment(new AlliancePlanFragment());
+    } else if (id == R.id.scout_new_team) {
+
+        Log.i(
+                getString(R.string.app_name),
+                "Scout New Team option has been selected"
+        );
+
+        showFragment(
+                new EditTeamFragment()
+        );
+
     } else if (id == R.id.edit_existing_team) {
-        Log.i(getString(R.string.app_name), "Edit Existing Team option has been selected");
-        showFragment(new MatchSearchFragment());
+
+        Log.i(
+                getString(R.string.app_name),
+                "Edit Existing Team option has been selected"
+        );
+
+        showFragment(
+                new MatchSearchFragment()
+        );
     }
 
-    DrawerLayout drawer = findViewById(R.id.drawer_layout);
-    drawer.closeDrawer(GravityCompat.START);
+    DrawerLayout drawer =
+            findViewById(
+                    R.id.drawer_layout
+            );
+
+    drawer.closeDrawer(
+            GravityCompat.START
+    );
+
     return true;
 }
 
@@ -139,4 +189,3 @@ public boolean onNavigationItemSelected(MenuItem item) {
         transaction.commit();
     }
 }
-

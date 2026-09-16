@@ -132,7 +132,7 @@ public partial class Form1 : Form
         }
 
         await webView.EnsureCoreWebView2Async();
-        webView.Source = new Uri(webBrowser);
+        webView.Source = new Uri($"{webBrowser}?v={DateTime.UtcNow.Ticks}");
     }
 
     private static async Task<bool> IsServiceReadyAsync(string url)

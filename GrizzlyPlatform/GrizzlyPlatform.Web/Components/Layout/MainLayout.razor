@@ -2,7 +2,7 @@
 @implements IDisposable
 @inject GrizzlyPlatform.Web.Services.EasterEggService EasterEggs
 
-<div class="app-shell @(konamiTheme ? "konami-theme" : "")" tabindex="0" @onkeydown="HandleSecretKey">
+<div class="app-shell @(konamiTheme ? "konami-theme" : "")" tabindex="0" autofocus @onkeydown="HandleSecretKey">
     <header class="app-header">
         <button class="menu-button" aria-label="Toggle navigation" @onclick="ToggleNavigation"><span></span><span></span><span></span></button>
         <button class="app-title app-title-button" @onclick="RevealEasterEgg">GrizzlyPlatform</button>
@@ -102,7 +102,7 @@
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.
     <a href="." class="reload">Reload</a>
-    <span class="dismiss">×</span>
+    <span class="dismiss">ï¿½</span>
 </div>
 
 @code {
@@ -229,7 +229,7 @@
         "Every data point helps your alliance make a better decision.",
         "Scout carefully, communicate clearly, and trust your preparation.",
         "Small observations can become a championship-winning advantage.",
-        "You are not just collecting numbers—you are helping your team understand the match."
+        "You are not just collecting numbersï¿½you are helping your team understand the match."
     };
 
     private static readonly string[] Jokes =
@@ -237,7 +237,7 @@
         "Why did the scout bring a ladder? To reach the top of the rankings.",
         "Scouting: because guessing is not a strategy.",
         "What is a robot's favorite kind of music? Algo-rhythm.",
-        "A good scout never loses track of the data—or the snack table."
+        "A good scout never loses track of the dataï¿½or the snack table."
     };
 }
 

@@ -1,93 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:fillViewport="true">
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="20dp">
-
-        <TextView
-            android:id="@+id/homeTitle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="GrizzlyScout"
-            android:textSize="30sp"
-            android:textStyle="bold"
-            android:gravity="center"
-            android:layout_marginBottom="6dp" />
-
-        <TextView
-            android:id="@+id/homeSeason"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="2026 REBUILT"
-            android:textSize="18sp"
-            android:gravity="center"
-            android:layout_marginBottom="24dp" />
-
-        <Button
-            android:id="@+id/viewSubmittedFormsButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="View Submitted Forms"
-            android:layout_marginBottom="12dp" />
-
-        <Button
-            android:id="@+id/newPitFormButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Fill Out New Pit Form"
-            android:layout_marginBottom="12dp" />
-
-        <Button
-            android:id="@+id/newMatchFormButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Fill Out New Match Form"
-            android:layout_marginBottom="12dp" />
-
-        <Button
-            android:id="@+id/editSubmittedFormsButton"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="View / Edit Submitted Forms"
-            android:layout_marginBottom="24dp" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Browse"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="10dp" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <Button
-                android:id="@+id/teamsButton"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Teams" />
-
-            <Button
-                android:id="@+id/currentEventButton"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="Current Event" />
-
-        </LinearLayout>
-
-    </LinearLayout>
-
-</ScrollView>
-
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:fillViewport="true" android:background="#CDB65A">
+<LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="24dp">
+<ImageView android:layout_width="180dp" android:layout_height="180dp" android:layout_gravity="center" android:src="@drawable/grizzly_icon" android:contentDescription="Grizzly Robotics logo" android:layout_marginBottom="8dp" />
+<TextView android:id="@+id/homeTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="GRIZZLYSCOUT" android:textSize="30sp" android:textStyle="bold" android:textColor="#211E20" android:gravity="center" />
+<TextView android:id="@+id/homeSeason" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="2026 REBUILT" android:textSize="16sp" android:textColor="#6D5820" android:gravity="center" android:layout_marginBottom="28dp" />
+<Button android:id="@+id/newMatchFormButton" android:layout_width="match_parent" android:layout_height="64dp" android:text="SCOUT" android:textSize="18sp" android:textStyle="bold" android:layout_marginBottom="12dp" />
+<Button android:id="@+id/currentEventButton" android:layout_width="match_parent" android:layout_height="64dp" android:text="EVENT" android:textSize="18sp" android:textStyle="bold" android:layout_marginBottom="12dp" />
+<Button android:id="@+id/alliancePlanButton" android:layout_width="match_parent" android:layout_height="64dp" android:text="ALLIANCE SELECTION" android:textSize="18sp" android:textStyle="bold" android:layout_marginBottom="22dp" />
+<TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Quick access is also available from the menu." android:textColor="#6D5820" android:gravity="center" android:textSize="13sp" />
+<Button android:id="@+id/viewSubmittedFormsButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Review submitted scouting" android:layout_marginTop="12dp" />
+<Button android:id="@+id/newPitFormButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Pit scouting" />
+<Button android:id="@+id/editSubmittedFormsButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Edit submitted scouting" />
+</LinearLayout></ScrollView>

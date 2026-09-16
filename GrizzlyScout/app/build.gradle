@@ -6,9 +6,9 @@ android {
     namespace 'com.ycsrobotics.grizzlyscout'
     compileSdk 35
 
-buildFeatures {
-    buildConfig = true
-}
+    buildFeatures {
+        buildConfig = true
+    }
 
     defaultConfig {
         applicationId "com.ycsrobotics.grizzlyscout"
@@ -18,6 +18,10 @@ buildFeatures {
         versionName "1.0-alpha-1"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        def localProperties = new Properties()
+        def localPropertiesFile = rootProject.file("local.properties")
+        if (localPropertiesFile.exists()) localPropertiesFile.withInputStream { localProperties.load(it) }
+        buildConfigField 'String', 'DEV_API_PIN', '"' + localProperties.getProperty('dev.api.pin', '') + '"'
     }
 
     buildTypes {
