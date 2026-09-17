@@ -11,6 +11,8 @@ public partial class Form1 : Form
     private readonly Panel loadingPanel = new();
     private readonly Label loadingLabel = new();
     private readonly PictureBox loadingLogo = new();
+    private readonly System.Windows.Forms.Timer loadingPulseTimer = new() { Interval = 45 };
+    private double loadingPulsePhase;
     private Process? apiProcess;
     private Process? webProcess;
     private readonly JsonElement settings;
@@ -50,7 +52,18 @@ public partial class Form1 : Form
         }
         loadingPanel.Controls.Add(loadingLabel);
         loadingPanel.Resize += (_, _) => LayoutLoadingControls();
-        LayoutLoadingControls();Controls.Add(webView);
+        LayoutLoadingControls();
+        loadingPulseTimer.Tick += (_, _) =>
+        {
+            if (!loadingPanel.Visible || loadingLogo.Image is null) return;
+            loadingPulsePhase += 0.10;
+            var scale = 1.0 + 0.08 * Math.Sin(loadingPulsePhase);
+            var size = (int)(220 * scale);
+            loadingLogo.Size = new Size(size, size);
+            LayoutLoadingControls();
+        };
+        loadingPulseTimer.Start();
+        Controls.Add(webView);
         Controls.Add(loadingPanel);
         Shown += async (_, _) => await StartServicesSafelyAsync();
         FormClosing += (_, _) => StopServices();
@@ -187,6 +200,9 @@ public partial class Form1 : Form
         }
     }
 }
+
+
+
 
 
 
