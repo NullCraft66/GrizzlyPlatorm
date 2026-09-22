@@ -3,24 +3,53 @@
 
 <PageTitle>Pair Devices</PageTitle>
 
-<h1>Pair scouting devices</h1>
-<p>Scan this code from a tablet on the same Wi-Fi network. The tablet will save the host connection automatically.</p>
-@if (pairing is null)
-{
-    <p>Loading pairing information...</p>
-}
-else
-{
-    <div class="card p-4" style="max-width: 520px">
-        <h2>@pairing.Name</h2>
-        <img class="img-fluid mb-3" style="max-width: 420px; image-rendering: pixelated" alt="GrizzlyScout pairing QR code" src="https://quickchart.io/qr?size=420&margin=4&ecLevel=M&text=@Uri.EscapeDataString(pairing.Qr)" />
-        <p class="small text-muted">If your camera does not recognize the GrizzlyScout link, scan the plain API address below and use it as the manual fallback.</p>
-        <img class="img-fluid mb-3" style="max-width: 420px; image-rendering: pixelated" alt="Plain API address QR code" src="https://quickchart.io/qr?size=420&margin=4&ecLevel=M&text=@Uri.EscapeDataString(pairing.Address)" />
-        <label class="form-label">Pairing link</label>
-        <code class="d-block text-break">@pairing.Qr</code>
-        <p class="mt-3 mb-0 text-muted">API: @pairing.Address<br />Host ID: @pairing.Id<br />Local name: @pairing.Mdns</p>
+<div class="pairing-page">
+    <div class="pairing-hero">
+        <div>
+            <div class="eyebrow">DEVICE SETUP</div>
+            <h1>Pair scouting devices</h1>
+            <p>Connect tablets to this host without typing an IP address. Keep the host and tablets on the same private Wi-Fi network.</p>
+        </div>
+        <div class="pairing-status"><span class="status-dot"></span> Host ready</div>
     </div>
-}
+
+    @if (pairing is null)
+    {
+        <div class="pairing-loading">Loading pairing information...</div>
+    }
+    else
+    {
+        <div class="pairing-grid">
+            <section class="pairing-card pairing-primary-card">
+                <div class="card-kicker">RECOMMENDED</div>
+                <h2>Scan with GrizzlyScout</h2>
+                <p class="card-description">In the app, choose <strong>Scan Pairing QR</strong>. The tablet will save this host and reconnect automatically when its IP changes.</p>
+                <div class="qr-frame"><img alt="GrizzlyScout pairing QR code" src="https://quickchart.io/qr?size=420&margin=4&ecLevel=M&text=@Uri.EscapeDataString(pairing.Qr)" /></div>
+                <div class="host-name">@pairing.Name</div>
+                <div class="host-id">Host ID: @pairing.Id</div>
+            </section>
+
+            <section class="pairing-card">
+                <div class="card-kicker">BACKUP METHOD</div>
+                <h2>Plain address QR</h2>
+                <p class="card-description">Use this if a phone camera does not recognize the GrizzlyScout pairing link. It contains only the API address.</p>
+                <div class="qr-frame qr-frame-small"><img alt="Plain API address QR code" src="https://quickchart.io/qr?size=360&margin=4&ecLevel=M&text=@Uri.EscapeDataString(pairing.Address)" /></div>
+                <code class="address-box">@pairing.Address</code>
+            </section>
+        </div>
+
+        <section class="connection-details">
+            <h2>Connection details</h2>
+            <div class="details-grid">
+                <div><span>Local host name</span><strong>@pairing.Mdns</strong></div>
+                <div><span>API port</span><strong>TCP 5263</strong></div>
+                <div><span>Discovery</span><strong>UDP 5264 + mDNS</strong></div>
+            </div>
+        </section>
+
+        <div class="pairing-help"><strong>Having trouble?</strong> Make sure Windows Firewall allows TCP 5263 and UDP 5264, and that the network does not isolate connected devices.</div>
+    }
+</div>
 
 @code {
     private PairingInfo? pairing;

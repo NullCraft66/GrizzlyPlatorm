@@ -1,0 +1,24 @@
+.pairing-page { max-width: 1180px; margin: 0 auto; padding: 1rem 0 3rem; }
+.pairing-hero { display:flex; justify-content:space-between; gap:2rem; align-items:flex-start; margin-bottom:2rem; padding:2rem; border-radius:20px; color:#211e20; background:linear-gradient(135deg,#cdb65a,#ead98d); box-shadow:0 12px 28px rgba(33,30,32,.12); }
+.eyebrow,.card-kicker { font-size:.72rem; font-weight:800; letter-spacing:.14em; color:#6e5d18; }
+.pairing-hero h1 { margin:.35rem 0 .5rem; font-size:clamp(2rem,4vw,3.25rem); }
+.pairing-hero p { max-width:650px; margin:0; font-size:1.05rem; }
+.pairing-status { white-space:nowrap; padding:.55rem .85rem; border-radius:999px; background:rgba(255,255,255,.55); font-weight:700; }
+.status-dot { display:inline-block; width:.6rem; height:.6rem; margin-right:.35rem; border-radius:50%; background:#2f8f45; }
+.pairing-grid { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(0,1fr); gap:1.25rem; align-items:stretch; }
+.pairing-card,.connection-details { background:#fff; border:1px solid rgba(33,30,32,.12); border-radius:18px; padding:1.5rem; box-shadow:0 8px 24px rgba(33,30,32,.07); }
+.pairing-card h2,.connection-details h2 { margin:.35rem 0 .5rem; }
+.card-description { color:#5d5960; min-height:3.2rem; }
+.qr-frame { display:flex; justify-content:center; padding:1rem; margin:1rem auto; max-width:460px; background:#fff; border:1px solid #e1e1e1; border-radius:14px; }
+.qr-frame img { display:block; width:min(100%,420px); image-rendering:pixelated; }
+.qr-frame-small img { width:min(100%,340px); }
+.host-name { text-align:center; font-weight:800; font-size:1.2rem; }
+.host-id { text-align:center; color:#777; font-size:.85rem; margin-top:.25rem; }
+.address-box { display:block; padding:.75rem; overflow-wrap:anywhere; background:#f5f5f5; border-radius:8px; color:#3b3b3b; }
+.connection-details { margin-top:1.25rem; }
+.details-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; }
+.details-grid div { display:flex; flex-direction:column; gap:.2rem; padding:1rem; background:#f8f7f3; border-radius:10px; }
+.details-grid span { color:#777; font-size:.82rem; }
+.pairing-help { margin-top:1.25rem; padding:1rem 1.25rem; border-left:4px solid #cdb65a; background:#f8f7f3; border-radius:8px; }
+.pairing-loading { padding:2rem; }
+@media (max-width: 760px) { .pairing-hero { flex-direction:column; padding:1.35rem; } .pairing-grid { grid-template-columns:1fr; } .details-grid { grid-template-columns:1fr; } }
