@@ -35,6 +35,8 @@ public final class GameFormApi {
         return getObject("Events");
     }
 
+    public static JSONArray getSeasons() throws Exception { return getArray("Seasons"); }
+
     public static JSONArray getEvents() throws Exception {
         return getArray("Events");
     }

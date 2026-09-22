@@ -18,8 +18,8 @@
             android:id="@+id/edit_existing_team"
             android:title="@string/edit_existing_team" />
 
+        <item android:id="@+id/nav_scan_pairing" android:title="Scan Pairing QR" />
         <item android:id="@+id/nav_alliance_plan" android:title="Alliance Plan" />
-        <item android:id="@+id/nav_api_settings" android:title="Developer API Settings" />
     </group>
 
 </menu>

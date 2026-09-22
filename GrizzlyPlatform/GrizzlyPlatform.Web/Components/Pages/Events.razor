@@ -3,10 +3,15 @@
 @rendermode InteractiveServer
 @implements IAsyncDisposable
 @inject HttpClient Http
+@inject GrizzlyPlatform.Web.Services.AuthState AuthState
 
 <PageTitle>Events</PageTitle>
 
 <h1>Events</h1>
+@if (!string.IsNullOrWhiteSpace(syncMessage))
+{
+    <div class="alert @(syncError ? "alert-danger" : "alert-success")">@syncMessage</div>
+}
 
 <button type="button" @onclick="ShowAddForm">
     + Add Event
@@ -125,9 +130,13 @@ else
                         </p>
 
 
-                        <a href="@($"/event-operations?eventId={eventItem.Id}")">Event Operations / recovery controls</a>
+                        @if (AuthState.IsLoggedIn)
+                        {
+                            <a href="@($"/event-operations?eventId={eventItem.Id}")">Event Operations / recovery controls</a>
+                        }
 
                        <div class="event-buttons">
+    <a class="btn btn-outline-primary" href="device-configuration">Set active on devices</a>
 
     <button type="button"
             @onclick="() => SyncTeams(eventItem.Id)">
@@ -278,53 +287,31 @@ else
     @match.MatchType @(match.MatchType == "Semifinal" ? match.SetNumber : match.MatchNumber)
 </h4>
 
-    <div class="match-alliance red-alliance">
-        <strong>Red</strong>
-
-        <span>
-            @match.RedTeam1?.TeamNumber
-        </span>
-
-        <span>
-            @match.RedTeam2?.TeamNumber
-        </span>
-
-        <span>
-            @match.RedTeam3?.TeamNumber
-        </span>
-
-        <strong class="match-score">
-            @match.RedScore
-        </strong>
-    </div>
-
-    <div class="match-alliance blue-alliance">
-        <strong>Blue</strong>
-
-        <span>
-            @match.BlueTeam1?.TeamNumber
-        </span>
-
-        <span>
-            @match.BlueTeam2?.TeamNumber
-        </span>
-
-        <span>
-            @match.BlueTeam3?.TeamNumber
-        </span>
-
-        <strong class="match-score">
-            @match.BlueScore
-        </strong>
-    </div>
-
     @if (!string.IsNullOrWhiteSpace(match.WinningAlliance))
     {
-        <p>
-            <strong>Winner:</strong>
-            @match.WinningAlliance
-        </p>
+        <div class="match-winner"><strong>Winner:</strong> @match.WinningAlliance</div>
     }
+
+    <div class="match-score-line">
+        <span class="blue-score">@match.BlueScore</span>
+        <span class="score-divider">-</span>
+        <span class="red-score">@match.RedScore</span>
+    </div>
+
+    <div class="match-teams-grid">
+        <div class="match-side blue-side">
+            <strong class="side-title">Blue</strong>
+            <span>Team @match.BlueTeam1?.TeamNumber</span>
+            <span>Team @match.BlueTeam2?.TeamNumber</span>
+            <span>Team @match.BlueTeam3?.TeamNumber</span>
+        </div>
+        <div class="match-side red-side">
+            <strong class="side-title">Red</strong>
+            <span>Team @match.RedTeam1?.TeamNumber</span>
+            <span>Team @match.RedTeam2?.TeamNumber</span>
+            <span>Team @match.RedTeam3?.TeamNumber</span>
+        </div>
+    </div>
 </div>
                                         }
 
@@ -359,6 +346,8 @@ private Dictionary<int, string> teamFilters = new();
 private HashSet<int> expandedMatches = new();
 
 private bool showForm;
+private string syncMessage = string.Empty;
+private bool syncError;
 
 private CancellationTokenSource? liveSyncCancellation;
 
@@ -543,32 +532,31 @@ public async ValueTask DisposeAsync()
 
     private async Task SyncTeams(int eventId)
     {
-        var response = await Http.PostAsync(
-            $"api/events/{eventId}/sync-teams",
-            null);
+        syncMessage = "Syncing teams...";
+        syncError = false;
+        var response = await Http.PostAsync($"api/events/{eventId}/sync-teams", null);
+        var body = await response.Content.ReadAsStringAsync();
+        syncError = !response.IsSuccessStatusCode;
+        syncMessage = response.IsSuccessStatusCode ? "Teams sync completed." : $"Teams sync failed ({(int)response.StatusCode}): {body}";
+        if (response.IsSuccessStatusCode) await LoadEvents();
+    }
 
-        if (response.IsSuccessStatusCode)
+    private async Task SyncNow(int eventId)
+    {
+        syncMessage = "Syncing teams, matches, and rankings...";
+        syncError = false;
+        var failures = new List<string>();
+        foreach (var resource in new[] { "teams", "matches", "rankings" })
         {
-            await LoadEvents();
+            var response = await Http.PostAsync($"api/EventOperations/{eventId}/sync/{resource}", null);
+            if (!response.IsSuccessStatusCode) failures.Add($"{resource}: {(int)response.StatusCode} {await response.Content.ReadAsStringAsync()}");
         }
-    }
-private async Task SyncNow(int eventId)
-{
-    foreach (var resource in new[] { "teams", "matches", "rankings" })
-    {
-        await Http.PostAsync($"api/EventOperations/{eventId}/sync/{resource}", null);
+        syncError = failures.Count > 0;
+        syncMessage = failures.Count == 0 ? "Full event sync completed." : "Sync failures: " + string.Join(" | ", failures);
+
     }
 
-    if (eventMatches.ContainsKey(eventId))
-    {
-        var matches = await Http.GetFromJsonAsync<List<MatchModel>>(
-            $"api/matches/event/{eventId}");
-
-        eventMatches[eventId] = matches ?? new();
-    }
-}
-
- private async Task LoadMatches(int eventId)
+    private async Task LoadMatches(int eventId)
 {
     // Sync matches from The Blue Alliance into the database
     await Http.PostAsync(
@@ -738,6 +726,15 @@ public class MatchModel
         public string Name { get; set; } = "";
     }
 }
+
+
+
+
+
+
+
+
+
 
 
 

@@ -25,6 +25,8 @@ import androidx.fragment.app.FragmentTransaction;
 import android.view.Menu;
 import android.widget.TextView;
 import android.graphics.Color;
+import com.journeyapps.barcodescanner.ScanContract;
+import com.journeyapps.barcodescanner.ScanOptions;
 
 import java.sql.Connection;
 import java.sql.Driver;
@@ -34,6 +36,22 @@ import java.sql.SQLException;
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener, EditTeamFragment.OnFragmentInteractionListener, HomePageFragment.OnFragmentInteractionListener,
         MatchSearchFragment.OnFragmentInteractionListener {
+
+    private final androidx.activity.result.ActivityResultLauncher<ScanOptions> pairingScanner = registerForActivityResult(new ScanContract(), result -> {
+        if (result.getContents() != null) applyPairingUri(android.net.Uri.parse(result.getContents()));
+    });
+
+    private void startPairingScan() { ScanOptions options = new ScanOptions(); options.setPrompt("Scan the host Pair Devices QR code"); options.setBeepEnabled(true); options.setOrientationLocked(false); pairingScanner.launch(options); }
+
+    private void applyPairingUri(android.net.Uri data) {
+        if (data != null && "grizzly".equals(data.getScheme()) && "pair".equals(data.getHost())) {
+            String address = data.getQueryParameter("address"); if (address == null || !address.startsWith("http")) { android.widget.Toast.makeText(this, "Invalid pairing code", android.widget.Toast.LENGTH_LONG).show(); return; } com.ycsrobotics.grizzlyscout.Api.ApiConfig.clearManualOverride(); com.ycsrobotics.grizzlyscout.Api.ApiConfig.setDiscoveredBaseUrl(address); verifyPairedHost(address);
+        }
+    }
+
+    private void verifyPairedHost(String address) {
+        new Thread(() -> { try { java.net.URL url = new java.net.URL(address + "health"); java.net.HttpURLConnection c = (java.net.HttpURLConnection) url.openConnection(); c.setConnectTimeout(4000); c.setReadTimeout(4000); int code = c.getResponseCode(); runOnUiThread(() -> android.widget.Toast.makeText(this, code >= 200 && code < 300 ? "Host connected" : "Host responded with error " + code, android.widget.Toast.LENGTH_LONG).show()); } catch (java.net.UnknownHostException e) { runOnUiThread(() -> android.widget.Toast.makeText(this, "Host name could not be resolved. Check that both devices are on the same network.", android.widget.Toast.LENGTH_LONG).show()); } catch (java.net.ConnectException e) { runOnUiThread(() -> android.widget.Toast.makeText(this, "Host is unreachable. Check Wi-Fi and the host firewall.", android.widget.Toast.LENGTH_LONG).show()); } catch (Exception e) { runOnUiThread(() -> android.widget.Toast.makeText(this, "Could not connect. Check the network and host app.", android.widget.Toast.LENGTH_LONG).show()); } }).start();
+    }
 
     private void applyPairingIntent(android.content.Intent intent) {
         android.net.Uri data = intent == null ? null : intent.getData();
@@ -140,7 +158,9 @@ public boolean onNavigationItemSelected(MenuItem item) {
 
     int id = item.getItemId();
 
-    if (id == R.id.nav_home) {
+    if (id == R.id.nav_scan_pairing) {
+        startPairingScan();
+    } else if (id == R.id.nav_home) {
 
         Log.i(
                 getString(R.string.app_name),
@@ -194,7 +214,7 @@ public boolean onNavigationItemSelected(MenuItem item) {
     }
 
     public void showSplashFragment(View view) {
-        Fragment fragmentSplash = new HomePageFragment();
+        Fragment fragmentSplash = new LandingFragment();
 
         FragmentManager fm = getSupportFragmentManager();
         FragmentTransaction transaction = fm.beginTransaction();

@@ -886,6 +886,10 @@
             return;
         }
 
+var duplicate = gameForms?.FirstOrDefault(f => f.Id != editingForm.Id && f.SeasonId == editingForm.SeasonId && f.FormType == editingForm.FormType && string.Equals(f.Name.Trim(), editingForm.Name.Trim(), StringComparison.OrdinalIgnoreCase));
+        if (duplicate != null && !await JS.InvokeAsync<bool>("confirm", $"A {(editingForm.FormType == 0 ? "Pit" : "Match")} form named '{editingForm.Name}' already exists for this season. Create another anyway?"))
+            return;
+
         var formToSave = editingForm;
 
         editing = false;

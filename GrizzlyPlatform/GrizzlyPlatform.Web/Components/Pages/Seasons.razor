@@ -15,7 +15,7 @@
 {
     <div class="secret-video-overlay" role="dialog" aria-label="Developer access prompt"><div class="secret-video-card"><div class="secret-video-title">ACCESSING MAIN PROGRAM</div><img class="secret-video-gif" src="images/nedry.gif" alt="Nedry says the magic word" /><audio autoplay loop controls class="secret-video-audio"><source src="audio/magic-word.mp3" type="audio/mpeg" /></audio><label for="magic-word" class="magic-word-label">Say the magic word:</label><input id="magic-word" class="form-control magic-word-input" @bind="magicWord" @bind:event="oninput" @onkeydown="HandleMagicWordKeyDown" autocomplete="off" /><button class="btn btn-primary magic-word-button" @onclick="SubmitMagicWord">Continue</button>@if (magicWordError){<p class="magic-word-error">That is not the magic word.</p>}</div></div>
 }
-@if (isLoading){<p>Loading seasons...</p>}else if (seasons.Count == 0){<div class="alert alert-info">No seasons have been created yet.</div>}else{<div class="card"><div class="card-body"><h4>Existing Seasons</h4><div class="list-group">@foreach (var season in seasons){<div class="list-group-item d-flex justify-content-between align-items-center"><div><strong>@season.Year</strong> — @season.Name</div><button class="btn btn-sm btn-outline-danger" @onclick="@(() => DeleteSeason(season.Id, season.Name))">Delete</button></div>}</div></div></div>}
+@if (isLoading){<p>Loading seasons...</p>}else if (seasons.Count == 0){<div class="alert alert-info">No seasons have been created yet.</div>}else{<div class="card"><div class="card-body"><h4>Existing Seasons</h4><div class="list-group">@foreach (var season in seasons){<div class="list-group-item d-flex justify-content-between align-items-center"><div><strong>@season.Year</strong> — @season.Name</div><a class="btn btn-sm btn-outline-primary" href="device-configuration">Set active on devices</a><button class="btn btn-sm btn-outline-danger" @onclick="@(() => DeleteSeason(season.Id, season.Name))">Delete</button></div>}</div></div></div>}
 @code {
     private List<SeasonModel> seasons = new();
     private bool isLoading = true;
@@ -27,11 +27,16 @@
 
     protected override async Task OnInitializedAsync() => await LoadSeasons();
     private async Task LoadSeasons(){ isLoading=true; try{seasons=await Http.GetFromJsonAsync<List<SeasonModel>>("api/Seasons")??new();}catch{seasons=new();}finally{isLoading=false;} }
-    private async Task CreateSeason(){ if(newSeasonYear<=0||string.IsNullOrWhiteSpace(newSeasonName))return; var season=new SeasonModel{Year=newSeasonYear,Name=newSeasonName.Trim()}; if(string.Equals(season.Name,"access main program",StringComparison.OrdinalIgnoreCase)){await StartDeveloperAccessVideo();return;} var response=await Http.PostAsJsonAsync("api/Seasons",season); if(!response.IsSuccessStatusCode)return; newSeasonName=string.Empty; await LoadSeasons(); }
+    private async Task CreateSeason(){ if(newSeasonYear<=0||string.IsNullOrWhiteSpace(newSeasonName))return; var season=new SeasonModel{Year=newSeasonYear,Name=newSeasonName.Trim()}; if(string.Equals(season.Name,"access main program",StringComparison.OrdinalIgnoreCase)){await StartDeveloperAccessVideo();return;} if(string.Equals(season.Name,"screensaver",StringComparison.OrdinalIgnoreCase)){EasterEggs.RequestScreensaver();return;} var response=await Http.PostAsJsonAsync("api/Seasons",season); if(!response.IsSuccessStatusCode)return; newSeasonName=string.Empty; await LoadSeasons(); }
+    private async Task StartScreensaverVideo(){ secretVideoVisible=true; magicWord=string.Empty; magicWordError=false; await InvokeAsync(StateHasChanged); }
     private async Task StartDeveloperAccessVideo(){ secretVideoVisible=true; magicWord=string.Empty; magicWordError=false; await InvokeAsync(StateHasChanged); }
     private async Task HandleMagicWordKeyDown(KeyboardEventArgs args){ if(args.Key=="Enter")await SubmitMagicWord(); }
-    private async Task SubmitMagicWord(){ if(!string.Equals(magicWord.Trim(),"please",StringComparison.OrdinalIgnoreCase)){magicWordError=true;return;} secretVideoVisible=false; magicWordError=false; await InvokeAsync(StateHasChanged); EasterEggs.RequestDeveloperPanel(); }
+    private async Task SubmitMagicWord(){ if(!string.Equals(magicWord.Trim(),"please",StringComparison.OrdinalIgnoreCase) && !string.Equals(magicWord.Trim(),"screensaver",StringComparison.OrdinalIgnoreCase)){magicWordError=true;return;} secretVideoVisible=false; magicWordError=false; await InvokeAsync(StateHasChanged); if (string.Equals(magicWord.Trim(),"screensaver",StringComparison.OrdinalIgnoreCase)) EasterEggs.RequestScreensaver(); else EasterEggs.RequestDeveloperPanel(); }
     private async Task DeleteSeason(int seasonId,string seasonName){var confirmed=await JS.InvokeAsync<bool>("confirm",$"Delete {seasonName}? This cannot be undone.");if(!confirmed)return;var response=await Http.DeleteAsync($"api/Seasons/{seasonId}");if(response.IsSuccessStatusCode)await LoadSeasons();}
 }
+
+
+
+
 
 

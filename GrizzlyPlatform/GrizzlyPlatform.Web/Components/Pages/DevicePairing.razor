@@ -13,7 +13,9 @@ else
 {
     <div class="card p-4" style="max-width: 520px">
         <h2>@pairing.Name</h2>
-        <img class="img-fluid mb-3" style="max-width: 320px" alt="GrizzlyScout pairing QR code" src="https://quickchart.io/qr?size=320&text=@Uri.EscapeDataString(pairing.Qr)" />
+        <img class="img-fluid mb-3" style="max-width: 420px; image-rendering: pixelated" alt="GrizzlyScout pairing QR code" src="https://quickchart.io/qr?size=420&margin=4&ecLevel=M&text=@Uri.EscapeDataString(pairing.Qr)" />
+        <p class="small text-muted">If your camera does not recognize the GrizzlyScout link, scan the plain API address below and use it as the manual fallback.</p>
+        <img class="img-fluid mb-3" style="max-width: 420px; image-rendering: pixelated" alt="Plain API address QR code" src="https://quickchart.io/qr?size=420&margin=4&ecLevel=M&text=@Uri.EscapeDataString(pairing.Address)" />
         <label class="form-label">Pairing link</label>
         <code class="d-block text-break">@pairing.Qr</code>
         <p class="mt-3 mb-0 text-muted">API: @pairing.Address<br />Host ID: @pairing.Id<br />Local name: @pairing.Mdns</p>

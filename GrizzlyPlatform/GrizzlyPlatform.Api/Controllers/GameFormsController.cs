@@ -120,6 +120,9 @@ public class GameFormsController : ControllerBase
         var season = await _context.Seasons
             .FindAsync(gameForm.SeasonId);
 
+        if (await _context.GameForms.AnyAsync(f => f.SeasonId == gameForm.SeasonId && f.FormType == gameForm.FormType && f.Name.ToLower() == gameForm.Name.ToLower()))
+            return Conflict("A form with this name and type already exists for the selected season.");
+
         if (season == null)
         {
             return BadRequest(
@@ -218,6 +221,9 @@ public class GameFormsController : ControllerBase
 
         var season = await _context.Seasons
             .FindAsync(updatedGameForm.SeasonId);
+
+        if (await _context.GameForms.AnyAsync(f => f.Id != id && f.SeasonId == updatedGameForm.SeasonId && f.FormType == updatedGameForm.FormType && f.Name.ToLower() == updatedGameForm.Name.ToLower()))
+            return Conflict("A form with this name and type already exists for the selected season.");
 
         if (season == null)
         {
