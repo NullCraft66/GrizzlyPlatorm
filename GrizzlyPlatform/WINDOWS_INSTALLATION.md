@@ -16,18 +16,9 @@ The local dashboard address is `http://127.0.0.1:5273`.
 
 ## Connect Android scouting devices
 
-On the host computer, run:
+1. Connect the host and tablets to the same private Wi-Fi/LAN.
+2. Allow the Grizzly Platform API through Windows Firewall on TCP port `5263` and discovery beacons on UDP port `5264`.
+3. Open GrizzlyScout on each tablet. It discovers the host automatically, including after network changes.
 
-```powershell
-ipconfig
-```
-
-Use the active adapter's IPv4 address from the Android setup guide. Devices must be on the same private Wi-Fi/LAN.
-
-The web dashboard uses port `5273`. The API uses port `5263`.
-
-## Changing networks
-
-The app normally does not need reconfiguration. Find the host's new IPv4 address with `ipconfig` and update the Android app if the address changed.
-
+Guest Wi-Fi networks may block device-to-device broadcasts. The Android developer API setting can be used as a manual fallback on networks that disable broadcast traffic.
 See [GrizzlyScout/INSTALLATION.md](../GrizzlyScout/INSTALLATION.md) for Android installation and connection instructions.

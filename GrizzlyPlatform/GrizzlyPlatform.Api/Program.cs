@@ -4,6 +4,7 @@ using GrizzlyPlatform.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false);
 
 // Register Entity Framework Core with SQLite.
 builder.Services.AddDbContext<GrizzlyDbContext>(options =>
@@ -17,6 +18,7 @@ builder.Services.AddHttpClient<TheBlueAllianceService>(client =>
 
 builder.Services.AddScoped<EventSyncService>();
 builder.Services.AddHostedService<LiveEventSyncService>();
+builder.Services.AddHostedService<HostDiscoveryService>();
 
 builder.Services.AddCors(options =>
 {
@@ -81,5 +83,6 @@ app.UseCors("ScoutingClients");
 app.MapControllers();
 
 app.Run();
+
 
 

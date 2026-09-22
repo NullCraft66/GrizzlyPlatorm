@@ -24,6 +24,7 @@ import androidx.fragment.app.FragmentTransaction;
 
 import android.view.Menu;
 import android.widget.TextView;
+import android.graphics.Color;
 
 import java.sql.Connection;
 import java.sql.Driver;
@@ -35,10 +36,15 @@ public class MainActivity extends AppCompatActivity
         MatchSearchFragment.OnFragmentInteractionListener {
 
     @Override
+    protected void onResume() { super.onResume(); com.ycsrobotics.grizzlyscout.Api.HostDiscovery.restart(); }
+
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         com.ycsrobotics.grizzlyscout.Api.ApiConfig.initialize(getApplicationContext());
+        TextView connectionStatus = findViewById(R.id.connection_status);
+        connectionStatus.setOnClickListener(v -> com.ycsrobotics.grizzlyscout.Api.HostDiscovery.restart());
+        com.ycsrobotics.grizzlyscout.Api.HostDiscovery.start((state, host) -> runOnUiThread(() -> connectionStatus.setText(host.isEmpty() ? state : state + " - " + host)));
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
