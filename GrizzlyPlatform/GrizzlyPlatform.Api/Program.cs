@@ -19,6 +19,7 @@ builder.Services.AddHttpClient<TheBlueAllianceService>(client =>
 builder.Services.AddScoped<EventSyncService>();
 builder.Services.AddHostedService<LiveEventSyncService>();
 builder.Services.AddHostedService<HostDiscoveryService>();
+builder.Services.AddHostedService<MdnsAdvertisementService>();
 
 builder.Services.AddCors(options =>
 {

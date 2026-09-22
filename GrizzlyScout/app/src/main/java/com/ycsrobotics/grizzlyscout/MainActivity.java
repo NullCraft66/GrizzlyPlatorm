@@ -35,6 +35,13 @@ public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener, EditTeamFragment.OnFragmentInteractionListener, HomePageFragment.OnFragmentInteractionListener,
         MatchSearchFragment.OnFragmentInteractionListener {
 
+    private void applyPairingIntent(android.content.Intent intent) {
+        android.net.Uri data = intent == null ? null : intent.getData();
+        if (data != null && "grizzly".equals(data.getScheme()) && "pair".equals(data.getHost())) {
+            String address = data.getQueryParameter("address"); if (address != null) { com.ycsrobotics.grizzlyscout.Api.ApiConfig.clearManualOverride(); com.ycsrobotics.grizzlyscout.Api.ApiConfig.setDiscoveredBaseUrl(address); }
+        }
+    }
+
     @Override
     protected void onResume() { super.onResume(); com.ycsrobotics.grizzlyscout.Api.HostDiscovery.restart(); }
 
@@ -44,7 +51,7 @@ public class MainActivity extends AppCompatActivity
         com.ycsrobotics.grizzlyscout.Api.ApiConfig.initialize(getApplicationContext());
         TextView connectionStatus = findViewById(R.id.connection_status);
         connectionStatus.setOnClickListener(v -> com.ycsrobotics.grizzlyscout.Api.HostDiscovery.restart());
-        com.ycsrobotics.grizzlyscout.Api.HostDiscovery.start((state, host) -> runOnUiThread(() -> connectionStatus.setText(host.isEmpty() ? state : state + " - " + host)));
+        com.ycsrobotics.grizzlyscout.Api.HostDiscovery.start(getApplicationContext(), (state, host) -> runOnUiThread(() -> connectionStatus.setText((String)(host.isEmpty() ? state : state + " - " + host))));
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
@@ -56,6 +63,7 @@ public class MainActivity extends AppCompatActivity
         navigationView.setNavigationItemSelectedListener(this);
 
         initializeDefaults();
+        applyPairingIntent(getIntent());
 
         //load our database driver
         try {
@@ -93,6 +101,8 @@ public class MainActivity extends AppCompatActivity
             TextView view = findViewById(R.id.bottom_nav_version);
             view.setText(getString(R.string.app_name).concat(" Version: ").concat(BuildConfig.VERSION_NAME));
 
+        view.setOnLongClickListener(v -> { showDeveloperApiSettings(); return true; });
+
         showSplashFragment(null);
     }
 
@@ -115,6 +125,16 @@ public class MainActivity extends AppCompatActivity
         transaction.commit();
     }
 
+    private void showDeveloperApiSettings() {
+        final android.widget.EditText pin = new android.widget.EditText(this); pin.setInputType(2 | 16);
+        new androidx.appcompat.app.AlertDialog.Builder(this).setTitle("Developer Access").setMessage("Enter developer PIN").setView(pin).setNegativeButton("Cancel", null).setPositiveButton("Unlock", (d,w) -> {
+            if (BuildConfig.DEV_API_PIN.equals(pin.getText().toString())) {
+                final android.widget.EditText input = new android.widget.EditText(this); input.setSingleLine(true); input.setText(com.ycsrobotics.grizzlyscout.Api.ApiConfig.getBaseUrl());
+                new androidx.appcompat.app.AlertDialog.Builder(this).setTitle("Developer API Settings").setView(input).setNegativeButton("Cancel", null).setPositiveButton("Save", (d2,w2) -> com.ycsrobotics.grizzlyscout.Api.ApiConfig.setBaseUrl(input.getText().toString())).show();
+            } else android.widget.Toast.makeText(this, "Incorrect developer PIN", android.widget.Toast.LENGTH_SHORT).show();
+        }).show();
+    }
+
    @Override
 public boolean onNavigationItemSelected(MenuItem item) {
 
@@ -131,20 +151,7 @@ public boolean onNavigationItemSelected(MenuItem item) {
                 new HomePageFragment()
         );
 
-        } else if (id == R.id.nav_api_settings) {
-        final android.widget.EditText pin = new android.widget.EditText(this);
-        pin.setInputType(2 | 16);
-        new androidx.appcompat.app.AlertDialog.Builder(this).setTitle("Developer Access").setMessage("Enter developer PIN").setView(pin).setNegativeButton("Cancel", null).setPositiveButton("Unlock", (d,w) -> {
-            if (BuildConfig.DEV_API_PIN.equals(pin.getText().toString())) {
-                final android.widget.EditText input = new android.widget.EditText(this);
-                input.setSingleLine(true);
-                input.setText(com.ycsrobotics.grizzlyscout.Api.ApiConfig.getBaseUrl());
-                new androidx.appcompat.app.AlertDialog.Builder(this).setTitle("Developer API Settings").setMessage("Enter the host API address").setView(input).setNegativeButton("Cancel", null).setPositiveButton("Save", (d2,w2) -> com.ycsrobotics.grizzlyscout.Api.ApiConfig.setBaseUrl(input.getText().toString())).show();
-            } else {
-                android.widget.Toast.makeText(this, "Incorrect developer PIN", android.widget.Toast.LENGTH_SHORT).show();
-            }
-        }).show();
-    } else if (id == R.id.nav_alliance_plan) {
+        } else if (id == R.id.nav_alliance_plan) {
         showFragment(new AlliancePlanFragment());
     } else if (id == R.id.scout_new_team) {
 

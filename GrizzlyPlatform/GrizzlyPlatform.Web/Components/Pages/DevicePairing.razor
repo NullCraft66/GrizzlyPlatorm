@@ -1,0 +1,27 @@
+@page "/device-pairing"
+@inject HttpClient Api
+
+<PageTitle>Pair Devices</PageTitle>
+
+<h1>Pair scouting devices</h1>
+<p>Scan this code from a tablet on the same Wi-Fi network. The tablet will save the host connection automatically.</p>
+@if (pairing is null)
+{
+    <p>Loading pairing information...</p>
+}
+else
+{
+    <div class="card p-4" style="max-width: 520px">
+        <h2>@pairing.Name</h2>
+        <img class="img-fluid mb-3" style="max-width: 320px" alt="GrizzlyScout pairing QR code" src="https://quickchart.io/qr?size=320&text=@Uri.EscapeDataString(pairing.Qr)" />
+        <label class="form-label">Pairing link</label>
+        <code class="d-block text-break">@pairing.Qr</code>
+        <p class="mt-3 mb-0 text-muted">API: @pairing.Address<br />Host ID: @pairing.Id<br />Local name: @pairing.Mdns</p>
+    </div>
+}
+
+@code {
+    private PairingInfo? pairing;
+    protected override async Task OnInitializedAsync() => pairing = await Api.GetFromJsonAsync<PairingInfo>("api/discovery/pairing");
+    private sealed record PairingInfo(string Name, string Id, string Address, string Mdns, string Qr);
+}
