@@ -5,10 +5,12 @@
 <TextView android:id="@+id/homeTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="GRIZZLYSCOUT" android:textSize="30sp" android:textStyle="bold" android:textColor="#211E20" android:gravity="center" />
 <TextView android:id="@+id/homeSeason" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="2026 REBUILT" android:textSize="16sp" android:textColor="#6D5820" android:gravity="center" android:layout_marginBottom="28dp" />
 <Button android:id="@+id/newMatchFormButton" android:layout_width="match_parent" android:layout_height="64dp" android:text="SCOUT" android:textSize="18sp" android:textStyle="bold" android:layout_marginBottom="12dp" />
+<TextView android:id="@+id/nexusQueueStatus" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="NEXUS: Connecting..." android:textColor="#211E20" android:textStyle="bold" android:padding="12dp" android:background="#E9D98A" />
 <Button android:id="@+id/currentEventButton" android:layout_width="match_parent" android:layout_height="64dp" android:text="EVENT" android:textSize="18sp" android:textStyle="bold" android:layout_marginBottom="12dp" />
 <Button android:id="@+id/alliancePlanButton" android:layout_width="match_parent" android:layout_height="64dp" android:text="ALLIANCE SELECTION" android:textSize="18sp" android:textStyle="bold" android:layout_marginBottom="22dp" />
 <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Quick access is also available from the menu." android:textColor="#6D5820" android:gravity="center" android:textSize="13sp" />
 <Button android:id="@+id/viewSubmittedFormsButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Review submitted scouting" android:layout_marginTop="12dp" />
+<Button android:id="@+id/pitMapButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="View scouted pit map" />
 <Button android:id="@+id/newPitFormButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Pit scouting" />
 <Button android:id="@+id/editSubmittedFormsButton" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Edit submitted scouting" />
 </LinearLayout></ScrollView>

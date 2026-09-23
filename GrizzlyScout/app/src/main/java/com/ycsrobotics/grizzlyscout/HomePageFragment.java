@@ -6,6 +6,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.fragment.app.Fragment;
@@ -48,7 +49,10 @@ public class HomePageFragment extends Fragment {
                 ((MainActivity) requireActivity()).showFragment(new AlliancePlanFragment()));
 
         view.findViewById(R.id.newMatchFormButton).setOnClickListener(v -> showScoutOptions());
-        view.findViewById(R.id.currentEventButton).setOnClickListener(v -> ((MainActivity) requireActivity()).showFragment(new CurrentEventFragment()));
+        view.findViewById(R.id.currentEventButton).setOnClickListener(v -> ((MainActivity) requireActivity()).showFragment(new NexusEventFragment()));
+        view.findViewById(R.id.pitMapButton).setOnClickListener(v -> ((MainActivity) requireActivity()).showFragment(new PitMapFragment()));
+        TextView queueStatus = view.findViewById(R.id.nexusQueueStatus);
+        new Thread(() -> { try { org.json.JSONObject snap = com.ycsrobotics.grizzlyscout.Api.NexusApi.getSnapshot(); String q = snap.optJSONObject("status") == null ? "None" : snap.optJSONObject("status").optString("nowQueuing", "None"); requireActivity().runOnUiThread(() -> queueStatus.setText("NEXUS QUEUING: " + q)); } catch (Exception e) { requireActivity().runOnUiThread(() -> queueStatus.setText("NEXUS: Offline")); } }).start();
 
         Button fillOutPitForm =
                 view.findViewById(
@@ -325,3 +329,6 @@ public class HomePageFragment extends Fragment {
         );
     }
 }
+
+
+
