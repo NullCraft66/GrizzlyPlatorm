@@ -4,7 +4,7 @@
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand grizzly-brand" href="">
-    <img class="brand-image-slot" src="@(AuthState.IsKimTheme ? "images/kim.jpg" : "images/kiwi-bear.png")" alt="@(AuthState.IsKimTheme ? "Dr. Kim theme image" : "Kiwi bear mascot")" />
+    <img class="brand-image-slot" src="@(AuthState.IsKimTheme ? "images/kim-screensaver.png" : "images/kiwi-bear.png")" alt="@(AuthState.IsKimTheme ? "Dr. Kim theme image" : "Kiwi bear mascot")" />
     <span>GrizzlyPlatform</span>
 </a>
     </div>
@@ -45,10 +45,14 @@
 else
 {
     <div class="nav-item px-3">
-        <NavLink class="nav-link" href="login">
-            <span class="bi bi-box-arrow-in-right"
-                  aria-hidden="true"></span> Login
-        </NavLink>
+        <div class="account-card guest-account-card">
+            <div class="account-name">Guest</div>
+            <div class="account-role">Sign in to access scouting tools</div>
+            <div class="account-message">welcome to GrizzlyPlatform</div>
+            <NavLink class="btn btn-outline-light w-100 account-login" href="login">
+                <span class="bi bi-box-arrow-in-right" aria-hidden="true"></span> Login
+            </NavLink>
+        </div>
     </div>
 }
 
@@ -98,6 +102,15 @@ else
             </NavLink>
         </div>
 
+        @if (AuthState.IsAdmin)
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="nexus-settings">
+                    <span class="bi bi-cloud-arrow-up" aria-hidden="true"></span> Nexus Settings
+                </NavLink>
+            </div>
+        }
+
         <div class="nav-item px-3">
             <NavLink class="nav-link" href="scouting">
                 <span class="bi bi-clipboard-check"
@@ -112,7 +125,7 @@ else
             </NavLink>
         </div>
 
-        @if (AuthState.Username.Equals("ultadmin", StringComparison.OrdinalIgnoreCase))
+        @if (AuthState.IsAdmin)
         {
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="appearance">Appearance Editor</NavLink>

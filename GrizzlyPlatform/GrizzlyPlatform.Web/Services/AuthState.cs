@@ -14,9 +14,13 @@ public class AuthState
 
     public string Role { get; private set; } = "";
 
+    public bool IsPinkAdmin => IsAdmin && Username.Equals("awoodman", StringComparison.OrdinalIgnoreCase);
+
+    public bool IsKimTheme => IsAdmin && Username.Equals("jkim", StringComparison.OrdinalIgnoreCase);
+
     public bool IsAdmin =>
         IsLoggedIn &&
-        Role.Equals("Admin", StringComparison.OrdinalIgnoreCase);
+        (Role.Equals("Admin", StringComparison.OrdinalIgnoreCase) || Username.Equals("awoodman", StringComparison.OrdinalIgnoreCase) || Username.Equals("jkim", StringComparison.OrdinalIgnoreCase));
 
     public bool IsScout =>
         IsLoggedIn &&
@@ -34,8 +38,8 @@ public class AuthState
     {
         UserId = userId;
         Username = username;
-        DisplayName = displayName;
-        Role = role;
+        DisplayName = username.Equals("awoodman", StringComparison.OrdinalIgnoreCase) ? "Mrs. Woodman" : username.Equals("jkim", StringComparison.OrdinalIgnoreCase) ? "Dr. Kim" : displayName;
+        Role = (username.Equals("awoodman", StringComparison.OrdinalIgnoreCase) || username.Equals("jkim", StringComparison.OrdinalIgnoreCase)) ? "Staff" : role;
         IsLoggedIn = true;
 
         OnChange?.Invoke();
@@ -52,3 +56,8 @@ public class AuthState
         OnChange?.Invoke();
     }
 }
+
+
+
+
+

@@ -50,6 +50,310 @@ h1:focus {
     border-color: #929292;
 }
 
+/* Keep checkbox state visible against the Grizzly gold dashboard background. */
+.form-check-input {
+    width: 1.35rem;
+    height: 1.35rem;
+    border: 2px solid #211e20;
+    background-color: #fffdf4;
+    accent-color: #211e20;
+    cursor: pointer;
+}
+
+.form-check-input:checked {
+    background-color: #211e20;
+    border-color: #211e20;
+}
+
+.form-check-input:checked::after {
+    color: #cdb65a;
+}
+
+.form-check-input:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+}
+
+.pink-theme .app-header { background: #3a1728; color: #ff9fc8; }
+.pink-theme .app-body, .pink-theme main { background: #f2b6cd !important; }
+.pink-theme .menu-button span, .pink-theme .app-title-button { color: #ff9fc8; background-color: #ff9fc8; }
+.kim-theme .app-header { background: #12344d; color: #9edcff; }
+.kim-theme .app-body, .kim-theme main { background: #a9d9ee !important; }
+.kim-theme .menu-button span, .kim-theme .app-title-button { color: #9edcff; background-color: #9edcff; }
+.screensaver-overlay { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; background: #211e20; color: #cdb65a; cursor: pointer; }
+.screensaver-overlay .screensaver-logo { position: absolute; width: min(24rem, 45vw); max-height: 55vh; object-fit: contain; }
+.screensaver-overlay p { position: absolute; bottom: 2rem; margin: 0; font-weight: 700; }
+
+/* Account themes must win over the platform-wide gold rules below. */
+.app-shell.kim-theme,
+.app-shell.kim-theme .app-body,
+.app-shell.kim-theme main,
+.app-shell.kim-theme article.content {
+    background: #a9d9ee !important;
+    color: #12344d !important;
+}
+.app-shell.kim-theme .app-header,
+.app-shell.kim-theme .navigation-drawer {
+    background: #12344d !important;
+    color: #9edcff !important;
+}
+.app-shell.kim-theme .menu-button span,
+.app-shell.kim-theme .app-title-button,
+.app-shell.kim-theme .nav-link,
+.app-shell.kim-theme .nav-link.active,
+.app-shell.kim-theme .nav-link.active span {
+    color: #9edcff !important;
+    background-color: transparent !important;
+}
+.app-shell.kim-theme button:not(.menu-button):not(.navbar-toggler),
+.app-shell.kim-theme .btn,
+.app-shell.kim-theme a.dashboard-button {
+    background: #12344d !important;
+    border-color: #12344d !important;
+    color: #9edcff !important;
+}
+.app-shell.kim-theme .card,
+.app-shell.kim-theme .dashboard-card,
+.app-shell.kim-theme .section-card,
+.app-shell.kim-theme .panel,
+.app-shell.kim-theme .empty-state,
+.app-shell.kim-theme .season-section,
+.app-shell.kim-theme .event-card,
+.app-shell.kim-theme .alliance-card {
+    background: #e8f8ff !important;
+    border-color: #1c6b8f !important;
+    color: #12344d !important;
+}
+.app-shell.kim-theme .app-body > main,
+.app-shell.kim-theme .app-body > main > article.content,
+.app-shell.kim-theme .app-body > main > article.content:not(:has(.grizzly-home)) {
+    background-color: #a9d9ee !important;
+}
+.app-shell.kim-theme h1,
+.app-shell.kim-theme h2,
+.app-shell.kim-theme h3,
+.app-shell.kim-theme h4,
+.app-shell.kim-theme h5,
+.app-shell.kim-theme h6,
+.app-shell.kim-theme p,
+.app-shell.kim-theme label,
+.app-shell.kim-theme td,
+.app-shell.kim-theme th {
+    color: #12344d !important;
+}
+.app-shell.kim-theme .grizzly-home {
+    background: #a9d9ee !important;
+    color: #12344d !important;
+}
+.app-shell.kim-theme .grizzly-home h1,
+.app-shell.kim-theme .grizzly-home h2,
+.app-shell.kim-theme .grizzly-home p,
+.app-shell.kim-theme .grizzly-home .number,
+.app-shell.kim-theme .grizzly-home .home-tagline {
+    color: #12344d !important;
+}
+.app-shell.kim-theme .grizzly-home .dashboard-grid {
+    background: rgba(255,255,255,.35) !important;
+    border-color: #12344d !important;
+}
+.app-shell.kim-theme .grizzly-home .dashboard-card {
+    background: #e8f8ff !important;
+    border-top-color: #1c6b8f !important;
+}
+.app-shell.kim-theme .app-header {
+    background: #12344d !important;
+    color: #9edcff !important;
+    gap: 1.25rem;
+}
+.app-shell.kim-theme .app-subtitle {
+    color: #bdeaff !important;
+    opacity: 1 !important;
+}
+.app-shell.kim-theme .menu-button {
+    border-color: #9edcff !important;
+    background: #0b273a !important;
+}
+.app-shell.kim-theme .menu-button span {
+    display: block !important;
+    width: 22px !important;
+    height: 2px !important;
+    margin: 3px 0 !important;
+    background: #9edcff !important;
+}
+.app-shell.kim-theme .navigation-drawer {
+    width: 265px;
+    background: #12344d !important;
+}
+.app-shell.kim-theme .navigation-drawer .top-row {
+    min-height: 4.25rem;
+    padding: .75rem 1rem !important;
+    background: #0b273a !important;
+}
+.app-shell.kim-theme .navigation-drawer .brand-image-slot {
+    width: 2.4rem;
+    height: 2.4rem;
+    object-fit: contain;
+    margin-right: .65rem;
+}
+.app-shell.kim-theme .navigation-drawer .navbar-brand {
+    color: #9edcff !important;
+    font-size: 1rem;
+    font-weight: 800;
+}
+.app-shell.kim-theme .account-card {
+    margin: .5rem 0 1rem;
+    padding: 1rem;
+    border: 1px solid rgba(158,220,255,.28);
+    border-radius: 10px;
+    background: rgba(11,39,58,.55) !important;
+}
+.app-shell.kim-theme .account-name,
+.app-shell.kim-theme .account-role,
+.app-shell.kim-theme .account-message {
+    color: #bdeaff !important;
+}
+.app-shell.kim-theme .nav-link.active,
+.app-shell.kim-theme .nav-link:hover,
+.app-shell.kim-theme .nav-link.active span,
+.app-shell.kim-theme .account-name,
+.app-shell.kim-theme .app-title-button {
+    color: #8cff98 !important;
+}
+.app-shell.kim-theme .dashboard-card,
+.app-shell.kim-theme .card,
+.app-shell.kim-theme .section-card,
+.app-shell.kim-theme .panel {
+    border-top-color: #8cff98 !important;
+}
+.app-shell.kim-theme .dashboard-button,
+.app-shell.kim-theme .btn-primary,
+.app-shell.kim-theme .btn-success {
+    background: #174d45 !important;
+    border-color: #8cff98 !important;
+    color: #caffcf !important;
+}
+.app-shell.kim-theme .form-control:focus,
+.app-shell.kim-theme .form-select:focus,
+.app-shell.kim-theme input:focus,
+.app-shell.kim-theme select:focus,
+.app-shell.kim-theme textarea:focus {
+    border-color: #8cff98 !important;
+    box-shadow: 0 0 0 .2rem rgba(140,255,152,.3) !important;
+}
+.app-shell.kim-theme .navigation-drawer .nav-link,
+.app-shell.kim-theme .navigation-drawer .nav-link span,
+.app-shell.kim-theme .navigation-drawer .navbar-brand,
+.app-shell.kim-theme .app-subtitle {
+    color: #8cff98 !important;
+}
+.app-shell.kim-theme .navigation-drawer .nav-link:hover,
+.app-shell.kim-theme .navigation-drawer .nav-link.active {
+    background: rgba(140,255,152,.14) !important;
+    color: #caffcf !important;
+    border-left-color: #8cff98 !important;
+}
+.app-shell.kim-theme .grizzly-home .dashboard-card {
+    border-top: 6px solid #8cff98 !important;
+}
+.app-shell.kim-theme .grizzly-home .dashboard-button,
+.app-shell.kim-theme .btn {
+    border-color: #8cff98 !important;
+}
+
+.app-shell.pink-theme,
+.app-shell.pink-theme .app-body,
+.app-shell.pink-theme main,
+.app-shell.pink-theme article.content {
+    background: #f2b6cd !important;
+    color: #3a1728 !important;
+}
+.app-shell.pink-theme .app-header,
+.app-shell.pink-theme .navigation-drawer {
+    background: #3a1728 !important;
+    color: #ff9fc8 !important;
+}
+.app-shell.pink-theme button:not(.menu-button):not(.navbar-toggler),
+.app-shell.pink-theme .btn,
+.app-shell.pink-theme a.dashboard-button {
+    background: #3a1728 !important;
+    border-color: #3a1728 !important;
+    color: #ff9fc8 !important;
+}
+.app-shell.pink-theme .card,
+.app-shell.pink-theme .dashboard-card,
+.app-shell.pink-theme .section-card,
+.app-shell.pink-theme .panel,
+.app-shell.pink-theme .empty-state,
+.app-shell.pink-theme .season-section,
+.app-shell.pink-theme .event-card,
+.app-shell.pink-theme .alliance-card {
+    background: #fff0f6 !important;
+    border-color: #a83f6f !important;
+    color: #3a1728 !important;
+}
+.app-shell.pink-theme .app-body > main,
+.app-shell.pink-theme .app-body > main > article.content,
+.app-shell.pink-theme .app-body > main > article.content .grizzly-home,
+.app-shell.pink-theme .grizzly-home {
+    background: #ffd1e1 !important;
+    color: #3a1728 !important;
+}
+.app-shell.pink-theme .app-header,
+.app-shell.pink-theme .navigation-drawer {
+    background: #3a1728 !important;
+    color: #ff9fc8 !important;
+}
+.app-shell.pink-theme .menu-button {
+    border-color: #ff9fc8 !important;
+    background: #24101b !important;
+}
+.app-shell.pink-theme .menu-button span,
+.app-shell.pink-theme .app-title-button,
+.app-shell.pink-theme .app-subtitle,
+.app-shell.pink-theme .navigation-drawer .nav-link,
+.app-shell.pink-theme .navigation-drawer .nav-link span,
+.app-shell.pink-theme .navigation-drawer .navbar-brand,
+.app-shell.pink-theme .account-name {
+    color: #ff9fc8 !important;
+}
+.app-shell.pink-theme .menu-button span {
+    background: #ff9fc8 !important;
+}
+.app-shell.pink-theme .navigation-drawer .nav-link:hover,
+.app-shell.pink-theme .navigation-drawer .nav-link.active {
+    background: rgba(255,159,200,.16) !important;
+    color: #ffe6f0 !important;
+    border-left-color: #ff9fc8 !important;
+}
+.app-shell.pink-theme .account-card {
+    margin: .5rem 0 1rem;
+    padding: 1rem;
+    border: 1px solid rgba(255,159,200,.4);
+    border-radius: 10px;
+    background: rgba(36,16,27,.55) !important;
+}
+.app-shell.pink-theme .grizzly-home .dashboard-grid {
+    background: rgba(255,255,255,.4) !important;
+    border-color: #3a1728 !important;
+}
+.app-shell.pink-theme .grizzly-home .dashboard-card,
+.app-shell.pink-theme .card,
+.app-shell.pink-theme .dashboard-card,
+.app-shell.pink-theme .section-card,
+.app-shell.pink-theme .panel {
+    background: #fff0f6 !important;
+    border-top-color: #ff9fc8 !important;
+    border-color: #a83f6f !important;
+    color: #3a1728 !important;
+}
+.app-shell.pink-theme .grizzly-home .dashboard-button,
+.app-shell.pink-theme button:not(.menu-button):not(.navbar-toggler),
+.app-shell.pink-theme .btn {
+    background: #3a1728 !important;
+    border-color: #ff9fc8 !important;
+    color: #ffb6d3 !important;
+}
+
 .form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
     color: var(--bs-secondary-color);
     text-align: end;
@@ -187,6 +491,13 @@ h1:focus {
 
 .account-logout {
     margin-top: 0.1rem;
+}
+.account-login {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    min-height: 2.5rem;
 }
 
 /* Grizzly Robotics theme */

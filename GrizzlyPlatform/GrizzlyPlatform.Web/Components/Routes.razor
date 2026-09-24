@@ -1,9 +1,23 @@
 
+@rendermode InteractiveServer
+
 <Router AppAssembly="typeof(Program).Assembly"
         NotFoundPage="typeof(Pages.NotFound)">
     <Found Context="routeData">
-       <RouteView RouteData="routeData"
-           DefaultLayout="typeof(Layout.MainLayout)" />
+       @if (routeData.PageType == typeof(Pages.Login)
+           || routeData.PageType == typeof(Pages.Home)
+           || routeData.PageType == typeof(Pages.Events))
+       {
+           <RouteView RouteData="routeData"
+               DefaultLayout="typeof(Layout.MainLayout)" />
+       }
+       else
+       {
+           <RequireLogin>
+               <RouteView RouteData="routeData"
+                   DefaultLayout="typeof(Layout.MainLayout)" />
+           </RequireLogin>
+       }
         <FocusOnNavigate RouteData="routeData"
                          Selector="h1" />
     </Found>

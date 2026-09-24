@@ -1,8 +1,9 @@
 @inherits LayoutComponentBase
 @implements IDisposable
 @inject GrizzlyPlatform.Web.Services.EasterEggService EasterEggs
+@inject GrizzlyPlatform.Web.Services.AuthState AuthState
 
-<div class="app-shell @(konamiTheme ? "konami-theme" : "")" tabindex="0" autofocus @onkeydown="HandleSecretKey">
+<div class="app-shell @(konamiTheme ? "konami-theme" : "") @(AuthState.IsPinkAdmin ? "pink-theme" : "") @(AuthState.IsKimTheme ? "kim-theme" : "")" tabindex="0" autofocus @onkeydown="HandleSecretKey">
     <header class="app-header">
         <button class="menu-button" aria-label="Toggle navigation" @onclick="ToggleNavigation"><span></span><span></span><span></span></button>
         <button class="app-title app-title-button" @onclick="RevealEasterEgg">GrizzlyPlatform</button>
@@ -22,6 +23,14 @@
         </main>
     </div>
 </div>
+
+@if (screensaverVisible)
+{
+    <div class="screensaver-overlay" role="dialog" aria-label="Grizzly screensaver" @onclick="CloseScreensaver">
+        <img class="screensaver-logo" src="@(AuthState.IsKimTheme ? "images/kim-screensaver.png" : "images/kiwi-bear.png")" alt="Grizzly screensaver" />
+        <p>Click anywhere to exit</p>
+    </div>
+}
 
 @if (easterEggVisible)
 {
@@ -113,6 +122,7 @@
     private bool developerVisible;
     private bool creditsVisible;
     private bool motivationVisible;
+    private bool screensaverVisible;
     private bool konamiTheme;
     private string currentMotivation = string.Empty;
     private string konamiBuffer = string.Empty;
@@ -147,6 +157,7 @@
     protected override void OnInitialized()
     {
         EasterEggs.DeveloperPanelRequested += ShowDeveloperPanel;
+        EasterEggs.ScreensaverRequested += ShowScreensaver;
     }
 
     private void ShowDeveloperPanel()
@@ -161,6 +172,7 @@
     public void Dispose()
     {
         EasterEggs.DeveloperPanelRequested -= ShowDeveloperPanel;
+        EasterEggs.ScreensaverRequested -= ShowScreensaver;
     }
 
     private void ToggleNavigation() => navigationOpen = !navigationOpen;
@@ -181,6 +193,8 @@
     private void CloseDeveloperPanel() => developerVisible = false;
     private void CloseCredits() => creditsVisible = false;
     private void CloseMotivation() => motivationVisible = false;
+    private void ShowScreensaver() => _ = InvokeAsync(() => { screensaverVisible = true; StateHasChanged(); });
+    private void CloseScreensaver() => screensaverVisible = false;
 
     private void HandleSecretKey(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs args)
     {

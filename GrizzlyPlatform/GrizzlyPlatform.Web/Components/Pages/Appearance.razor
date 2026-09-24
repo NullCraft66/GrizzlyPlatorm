@@ -1,0 +1,57 @@
+@page "/appearance"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Components.Forms
+@inject GrizzlyPlatform.Web.Services.AuthState AuthState
+@inject IWebHostEnvironment Environment
+
+<PageTitle>Appearance Editor</PageTitle>
+
+@if (!IsUltAdmin)
+{
+    <h1>Access denied</h1>
+    <p>Only UltAdmin can change platform artwork.</p>
+}
+else
+{
+    <h1>Appearance Editor</h1>
+    <p>Replace shared artwork for the desktop platform. Changes affect future loads for all users.</p>
+    @foreach (var item in items)
+    {
+        <div class="card p-3 mb-3">
+            <h3>@item.Label</h3>
+            <img class="appearance-preview" src="images/@item.FileName" alt="@item.Label preview" />
+            <InputFile OnChange="@(e => Upload(e, item))" accept="image/png,image/jpeg,image/gif" />
+            @if (!string.IsNullOrWhiteSpace(item.Message)) { <p>@item.Message</p> }
+        </div>
+    }
+}
+
+@code {
+    private bool IsUltAdmin => AuthState.IsAdmin;
+    private readonly List<ArtworkItem> items = new()
+    {
+        new("Title / mascot image", "kiwi-bear.png"),
+        new("Loading image", "loading-pulse.gif"),
+        new("App / taskbar icon", "grizzly-app-icon.png")
+    };
+    private sealed class ArtworkItem(string label, string fileName)
+    {
+        public string Label { get; } = label;
+        public string FileName { get; } = fileName;
+        public string Message { get; set; } = "";
+    }
+    private async Task Upload(InputFileChangeEventArgs args, ArtworkItem item)
+    {
+        if (!IsUltAdmin) return;
+        var file = args.File;
+        if (file is null) return;
+        var ext = Path.GetExtension(file.Name).ToLowerInvariant();
+        if (ext is not ".png" and not ".jpg" and not ".jpeg" and not ".gif") { item.Message = "Use PNG, JPG, or GIF."; return; }
+        var path = Path.Combine(Environment.WebRootPath, "images", item.FileName);
+        await using var input = file.OpenReadStream(8 * 1024 * 1024);
+        await using var output = File.Create(path);
+        await input.CopyToAsync(output);
+        item.Message = "Saved. Refresh the page to see the new artwork.";
+    }
+}
+

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Drawing;
 using System.Text.Json;
+using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
 
 namespace GrizzlyPlatform.Desktop;
@@ -120,9 +121,9 @@ public partial class Form1 : Form
         var apiExe = Path.Combine(AppContext.BaseDirectory, "Api", "GrizzlyPlatform.Api.exe");
         var webExe = Path.Combine(AppContext.BaseDirectory, "Web", "GrizzlyPlatform.Web.exe");
         var apiListen = Setting("ApiUrl", "http://0.0.0.0:5263");
-        var apiBrowser = Setting("ApiBrowserUrl", "http://127.0.0.1:5263");
+        var apiBrowser = Setting("ApiBrowserUrl", "http://localhost:5263");
         var webListen = Setting("WebListenUrl", "http://0.0.0.0:5273");
-        var webBrowser = Setting("WebUrl", "http://127.0.0.1:5273");
+        var webBrowser = Setting("WebUrl", "http://localhost:5273");
         var database = Setting("DatabasePath", "grizzlyplatform.db");
 
         var apiHealthUrl = $"{apiBrowser}/api/health";
@@ -144,7 +145,10 @@ public partial class Form1 : Form
             await WaitForServiceAsync(webBrowser);
         }
 
-        await webView.EnsureCoreWebView2Async();
+        var userDataFolder = Path.Combine(Path.GetTempPath(), "GrizzlyPlatform-WebView2", Environment.ProcessId.ToString());
+        Directory.CreateDirectory(userDataFolder);
+        var environment = await CoreWebView2Environment.CreateAsync(null, userDataFolder);
+        await webView.EnsureCoreWebView2Async(environment);
         webView.Source = new Uri($"{webBrowser}?v={DateTime.UtcNow.Ticks}");
     }
 
