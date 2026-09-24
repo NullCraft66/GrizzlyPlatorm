@@ -34,12 +34,15 @@ app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages:
 app.UseWebSockets();
 app.UseAntiforgery();
 
+// Let the native Mac shell confirm the embedded web host is ready without
+// waiting for a dashboard page that may be loading data from the API server.
+app.MapGet("/_mac-ready", () => Results.Ok());
+
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.Run();
-
 
 
 
