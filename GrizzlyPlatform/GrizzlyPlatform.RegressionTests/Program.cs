@@ -169,6 +169,10 @@ Check((await db.ActiveScoutingConfigurations.SingleAsync()).ActivePitFormId == p
 Check(!(await db.Database.GetPendingMigrationsAsync()).Any(),
     "All database migrations applied");
 Console.WriteLine($"All {checks} device configuration regression checks passed.");
+await NexusRegressionChecks.Run();
 await AllianceSelectionChecks.Run();
 
 await AlliancePlanningChecks.Run();
+await NexusRegressionChecks.Run();
+
+
