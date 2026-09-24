@@ -499,8 +499,8 @@ else if (field.FieldType == 1)
             .Where(s => s.TeamId == teamId && s.EventId == selectedEventId && s.GameFormId == selectedPitFormId)
             .OrderByDescending(s => s.SubmittedAt).ThenByDescending(s => s.Id).FirstOrDefault();
         var answer = submission?.Answers.FirstOrDefault(a => a.FieldId == fieldId);
-        var field = scoutingFields.First(f => f.Id == fieldId);
-        return GrizzlyPlatform.Web.Services.ScoutingAnswerFilter.Matches(field.FieldType, answer?.Value, value);
+        var field = scoutingFields.FirstOrDefault(f => f.Id == fieldId);
+        return field is not null && GrizzlyPlatform.Web.Services.ScoutingAnswerFilter.Matches(field.FieldType, answer?.Value, value);
     }
 
     private bool IsSelected(int teamId) =>
@@ -767,6 +767,8 @@ private class ScoutingAnswerModel
         public int TeamNumber { get; set; }
         public string Name { get; set; } = "";
     }}
+
+
 
 
 

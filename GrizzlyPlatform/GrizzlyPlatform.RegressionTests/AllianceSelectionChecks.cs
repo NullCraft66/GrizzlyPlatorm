@@ -198,7 +198,7 @@ internal static class AllianceSelectionChecks
                     new { teamId = i, teamNumber = i, teamName = $"Team {i}", rank = i })),
                 "/api/ActiveScoutingConfiguration" => """{"activePitFormId":1}""",
                 "/api/GameForms" => """
-                    [{"id":1,"seasonId":1,"formType":0,"name":"Active","fields":[{"id":10,"question":"Climb","fieldType":2}]},
+                    [{"id":1,"seasonId":1,"formType":0,"name":"Active","fields":[{"id":10,"question":"Climb","fieldType":2,"isAllianceSelectionFilter":true}]},
                      {"id":2,"seasonId":1,"formType":0,"name":"Newer","fields":[]}]
                     """,
                 "/api/GameFormSubmissions/event/1" => """
