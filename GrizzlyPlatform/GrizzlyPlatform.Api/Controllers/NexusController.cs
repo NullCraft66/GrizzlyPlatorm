@@ -13,7 +13,7 @@ public sealed class NexusController(NexusService nexus, NexusSettingsStore store
     [HttpGet("event/{eventKey}")]
     public Task<IActionResult> Event(string eventKey, CancellationToken token) => Proxy(eventKey, () => nexus.GetEventAsync(eventKey, token));
     [HttpGet("event/{eventKey}/pits")]
-'    public async Task<IActionResult> Pits(string eventKey, CancellationToken token)
+    public async Task<IActionResult> Pits(string eventKey, CancellationToken token)
     {
         var settings = store.Get();
         if (string.IsNullOrWhiteSpace(settings.ApiKey)) return StatusCode(503, new { message = "Nexus is not configured on the host." });
@@ -25,7 +25,7 @@ public sealed class NexusController(NexusService nexus, NexusSettingsStore store
         }
         catch (HttpRequestException) { return Ok(new { available = false, pits = new { } });
         }
-    }'
+    }
     [HttpGet("event/{eventKey}/map")]
     public Task<IActionResult> Map(string eventKey, CancellationToken token) => Proxy(eventKey, () => nexus.GetMapAsync(eventKey, token));
     [HttpGet("snapshot")]
@@ -49,6 +49,7 @@ public sealed class NexusController(NexusService nexus, NexusSettingsStore store
         catch (HttpRequestException ex) { return StatusCode(502, new { message = "Nexus request failed.", detail = ex.Message }); }
     }
 }
+
 
 
 
