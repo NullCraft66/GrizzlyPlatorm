@@ -173,6 +173,6 @@ await NexusRegressionChecks.Run();
 await AllianceSelectionChecks.Run();
 
 await AlliancePlanningChecks.Run();
-await NexusRegressionChecks.Run();
+
 
 
