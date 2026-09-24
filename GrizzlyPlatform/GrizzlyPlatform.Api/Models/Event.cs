@@ -23,5 +23,8 @@ public class Event
     public DateTime? StartDate { get; set; }
 
     public DateTime? EndDate { get; set; }
+
+    public string? NexusEventKey { get; set; }
 }
+
 

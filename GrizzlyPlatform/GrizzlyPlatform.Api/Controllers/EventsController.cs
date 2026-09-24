@@ -110,6 +110,17 @@ public class EventsController : ControllerBase
         return Ok(eventItem);
     }
 
+    [HttpPut("{id}/nexus-key")]
+    public async Task<IActionResult> UpdateNexusKey(int id, NexusEventKeyUpdate update)
+    {
+        var eventItem = await _context.Events.FindAsync(id);
+        if (eventItem == null) return NotFound();
+        if (string.IsNullOrWhiteSpace(update.NexusEventKey)) return BadRequest("Nexus event key is required.");
+        eventItem.NexusEventKey = update.NexusEventKey.Trim();
+        await _context.SaveChangesAsync();
+        return Ok(eventItem);
+    }
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteEvent(int id)
     {
@@ -198,6 +209,8 @@ public class EventsController : ControllerBase
 
 
 }
+
+
 
 
 

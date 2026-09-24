@@ -1,0 +1,32 @@
+@page "/nexus-settings"
+@inject HttpClient Api
+
+<PageTitle>Nexus Settings</PageTitle>
+<div class="container py-4" style="max-width:760px">
+    <h1>Nexus event integration</h1>
+    <p class="text-muted">Keep the Nexus API key on the host and share live queue, match, and pit data with scouting tablets.</p>
+    <div class="card p-4 shadow-sm">
+        <label class="form-label">Nexus API key</label>
+        <input class="form-control mb-3" type="password" @bind="apiKey" placeholder="Paste the host API key" />
+        <label class="form-label">Event key</label>
+        <input class="form-control mb-3" @bind="eventKey" placeholder="Example: 2026miket" />
+        <div class="form-check mb-3"><input class="form-check-input" type="checkbox" @bind="enabled" id="nexusEnabled" /><label class="form-check-label" for="nexusEnabled">Enable Nexus integration</label></div>
+        <div class="d-flex gap-2"><button class="btn btn-primary" @onclick="Save">Save settings</button><button class="btn btn-outline-secondary" @onclick="Test">Test connection</button></div>
+        @if (!string.IsNullOrWhiteSpace(message)) { <div class="alert alert-info mt-3 mb-0">@message</div> }
+    </div>
+</div>
+@code {
+    private string apiKey = "", eventKey = "", message = ""; private bool enabled; private int selectedEventId; private string lookupName = "", lookupLocation = "", lookupBlueAllianceKey = ""; private DateTime? lookupStart, lookupEnd; private List<EventModel> events = new(); private List<NexusMatch> matches = new();
+    protected override async Task OnInitializedAsync() { var s = await Api.GetFromJsonAsync<Settings>("api/nexus/settings"); if (s is not null) { eventKey=s.EventKey; enabled=s.Enabled; } events = await Api.GetFromJsonAsync<List<EventModel>>("api/events") ?? new(); }
+    private void LoadEvent() { var e = events.FirstOrDefault(x => x.Id == selectedEventId); if (e is null) return; lookupName=e.Name; lookupLocation=e.Location; lookupStart=e.StartDate; lookupEnd=e.EndDate; lookupBlueAllianceKey=e.BlueAllianceKey ?? ""; }
+    private async Task FindNexusEvent() { var data = await Api.GetFromJsonAsync<Dictionary<string, NexusMatch>>("api/nexus/settings/events") ?? new(); matches = data.Where(x => (string.IsNullOrWhiteSpace(lookupName) || x.Value.Name.Contains(lookupName, StringComparison.OrdinalIgnoreCase)) && (!lookupStart.HasValue || DateTimeOffset.FromUnixTimeMilliseconds(x.Value.Start).LocalDateTime.Date == lookupStart.Value.Date) && (!lookupEnd.HasValue || DateTimeOffset.FromUnixTimeMilliseconds(x.Value.End).LocalDateTime.Date == lookupEnd.Value.Date)).Select(x => { x.Value.Key=x.Key; return x.Value; }).ToList(); }
+    private async Task SelectKey(string key) { eventKey=key; if (selectedEventId > 0) await Api.PutAsJsonAsync($"api/events/{selectedEventId}/nexus-key", new { NexusEventKey=key }); message="Nexus key selected and saved to the host event."; }
+
+    private async Task Save() { var response = await Api.PutAsJsonAsync("api/nexus/settings", new { ApiKey=apiKey, EventKey=eventKey, Enabled=enabled }); message = response.IsSuccessStatusCode ? "Nexus settings saved." : "Could not save Nexus settings."; }
+    private async Task Test() { var response = await Api.GetAsync($"api/nexus/event/{Uri.EscapeDataString(eventKey)}"); message = response.IsSuccessStatusCode ? "Nexus connection succeeded." : $"Nexus connection failed ({(int)response.StatusCode})."; }
+    private sealed record Settings(string EventKey, bool Enabled, bool Configured);
+    private sealed class EventModel { public int Id { get; set; } public string Name { get; set; } = ""; public string Location { get; set; } = ""; public DateTime? StartDate { get; set; } public DateTime? EndDate { get; set; } public string? BlueAllianceKey { get; set; } public SeasonModel? Season { get; set; } }
+    private sealed class SeasonModel { public int Year { get; set; } }
+    private sealed class NexusMatch { public string Key { get; set; } = ""; public string Name { get; set; } = ""; public long Start { get; set; } public long End { get; set; } }
+}
+
