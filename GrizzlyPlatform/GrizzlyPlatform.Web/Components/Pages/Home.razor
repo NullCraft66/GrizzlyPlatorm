@@ -6,7 +6,7 @@
 <div class="grizzly-home">
     <header class="home-hero">
         <div class="home-logo-wrap">
-            <img src="images/grizzly-logo.png" alt="Grizzly Platform logo" class="home-logo" />
+            <img src="images/grizzly-logo.png" alt="Grizzly Robotics team emblem" class="home-logo" />
         </div>
         <h1>Grizzly Robotics</h1>
         <p class="home-tagline">Robotics scouting and event management platform</p>
@@ -14,73 +14,85 @@
 
     @if (isLoading)
     {
-        <p class="home-loading" role="status">Loading platform overview…</p>
+        <p class="home-loading" role="status">Loading the live overview…</p>
     }
     else if (loadError is not null)
     {
-        <section class="home-error-state" role="alert" aria-labelledby="home-error-title">
-            <h2 id="home-error-title">Overview unavailable</h2>
-            <p>@loadError</p>
+        <section class="home-error-banner" role="alert" aria-labelledby="home-error-title">
+            <span class="home-error-icon bi bi-exclamation-circle-fill" aria-hidden="true"></span>
+            <div class="home-error-copy">
+                <h2 id="home-error-title">Dashboard data unavailable</h2>
+                <p>@loadError</p>
+            </div>
+            @if (loadErrorStatusCode is { } statusCode)
+            {
+                <span class="home-error-code">HTTP @((int)statusCode)</span>
+            }
             <button type="button" class="dashboard-button" @onclick="LoadOverviewAsync">
-                Try again
+                Retry
             </button>
         </section>
     }
-    else
+
+    @if (events is not null && events.Any(IsCompetitionDay))
     {
-        var loadedEvents = events ?? new List<EventModel>();
-
-        @if (loadedEvents.Any(IsCompetitionDay))
-        {
-            <div class="competition-message" role="status">Good luck at competition today, Grizzly Robotics!</div>
-        }
-
-        <section class="dashboard-grid" aria-label="Platform overview">
-
-            <article class="dashboard-card">
-                <h2>Events</h2>
-                <p class="number event-count">@loadedEvents.Count</p>
-                <NavLink class="dashboard-button" href="events">
-                    View Events
-                </NavLink>
-            </article>
-
-            <article class="dashboard-card">
-                <h2>Current Season</h2>
-
-                @if (loadedEvents.Count > 0 && loadedEvents[0].Season is not null)
-                {
-                    <p class="number">@loadedEvents[0].Season!.Name</p>
-                    <p class="dashboard-detail">@loadedEvents[0].Season!.Year</p>
-                }
-                else
-                {
-                    <p class="dashboard-detail">No season data</p>
-                }
-            </article>
-
-            <article class="dashboard-card">
-                <h2>Latest Event</h2>
-
-                @if (loadedEvents.Count > 0)
-                {
-                    <p class="number">@loadedEvents[0].Name</p>
-                    <p class="dashboard-detail">@loadedEvents[0].Location</p>
-                }
-                else
-                {
-                    <p class="dashboard-detail">No events</p>
-                }
-            </article>
-
-        </section>
+        <div class="competition-message" role="status">Good luck at competition today, Grizzly Robotics!</div>
     }
+
+    <section class="dashboard-grid" aria-label="Platform overview">
+
+        <article class="dashboard-card">
+            <h2>Events</h2>
+            <p class="number event-count">@(events is null ? "—" : events.Count.ToString())</p>
+            <NavLink class="dashboard-button" href="events">
+                View Events
+            </NavLink>
+        </article>
+
+        <article class="dashboard-card">
+            <h2>Current Season</h2>
+
+            @if (events is null)
+            {
+                <p class="dashboard-detail">Unavailable</p>
+            }
+            else if (events.Count > 0 && events[0].Season is not null)
+            {
+                <p class="number">@events[0].Season!.Name</p>
+                <p class="dashboard-detail">@events[0].Season!.Year</p>
+            }
+            else
+            {
+                <p class="dashboard-detail">No season data</p>
+            }
+        </article>
+
+        <article class="dashboard-card">
+            <h2>Latest Event</h2>
+
+            @if (events is null)
+            {
+                <p class="dashboard-detail">Unavailable</p>
+            }
+            else if (events.Count > 0)
+            {
+                <p class="number">@events[0].Name</p>
+                <p class="dashboard-detail">@events[0].Location</p>
+            }
+            else
+            {
+                <p class="dashboard-detail">No events</p>
+            }
+        </article>
+
+    </section>
 </div>
 
 @code {
     private List<EventModel>? events;
     private bool isLoading = true;
     private string? loadError;
+    private System.Net.HttpStatusCode? loadErrorStatusCode;
 
     private static bool IsCompetitionDay(EventModel eventItem)
     {
@@ -96,15 +108,32 @@
     {
         isLoading = true;
         loadError = null;
+        loadErrorStatusCode = null;
         events = null;
 
         try
         {
-            events = await Http.GetFromJsonAsync<List<EventModel>>("api/events") ?? new();
+            using var response = await Http.GetAsync("api/events");
+            if (!response.IsSuccessStatusCode)
+            {
+                loadErrorStatusCode = response.StatusCode;
+                loadError = response.StatusCode switch
+                {
+                    System.Net.HttpStatusCode.Unauthorized => "Sign in to view event data, then try again.",
+                    System.Net.HttpStatusCode.Forbidden => "Your account does not have permission to load event data.",
+                    System.Net.HttpStatusCode.NotFound => "The events service is not available in this environment yet.",
+                    System.Net.HttpStatusCode.ServiceUnavailable => "The scouting service is temporarily unavailable. Try again in a moment.",
+                    System.Net.HttpStatusCode.InternalServerError => "The API responded, but could not load event data. Try again, or contact a platform administrator if this continues.",
+                    _ => "The server responded, but the event overview could not be loaded. Try again or contact a platform administrator."
+                };
+                return;
+            }
+
+            events = await response.Content.ReadFromJsonAsync<List<EventModel>>() ?? new();
         }
         catch (HttpRequestException)
         {
-            loadError = "Could not reach the GrizzlyPlatform API. Check the connection and try again.";
+            loadError = "Could not connect to the GrizzlyPlatform API. Check the connection and try again.";
         }
         catch (TaskCanceledException)
         {
@@ -139,4 +168,3 @@
         public string Name { get; set; } = "";
     }
 }
-

@@ -50,37 +50,54 @@
 }
 
 .home-loading {
-    margin: 3rem 0 0;
+    margin: 1.75rem 0 0;
     color: #403820;
     font-size: 1rem;
 }
 
-.home-error-state {
-    width: min(100%, 34rem);
+.home-error-banner {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: .9rem;
+    width: min(100%, 72rem);
     box-sizing: border-box;
-    margin: 3rem 0 0;
-    padding: clamp(1.25rem, 3vw, 2rem);
+    margin: 1.25rem 0 0;
+    padding: .85rem 1rem;
     border: 1px solid rgba(33, 30, 32, .2);
     border-left: 6px solid #8f2d24;
-    border-radius: 12px;
+    border-radius: 10px;
     background: #fffdf4;
-    box-shadow: 0 8px 22px rgba(33, 30, 32, .12);
+    box-shadow: 0 6px 18px rgba(33, 30, 32, .1);
+    text-align: left;
 }
 
-.home-error-state h2 {
+.home-error-icon {
+    color: #8f2d24;
+    font-size: 1.25rem;
+}
+
+.home-error-copy h2 {
     margin: 0;
     color: #211e20;
-    font-size: 1.25rem;
+    font-size: 1rem;
     font-weight: 850;
 }
 
-.home-error-state p {
-    margin: .65rem 0 1rem;
+.home-error-copy p {
+    margin: .25rem 0 0;
     color: #615a4a;
-    line-height: 1.5;
+    line-height: 1.4;
 }
 
-.home-error-state .dashboard-button {
+.home-error-code {
+    color: #6d5820;
+    font-size: .83rem;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.home-error-banner .dashboard-button {
     margin-top: 0;
 }
 
@@ -102,7 +119,7 @@
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: clamp(1rem, 2vw, 1.5rem);
-    margin: clamp(2.25rem, 5vh, 3.75rem) auto 0;
+    margin: 1.5rem auto 0;
     padding: clamp(.85rem, 1.6vw, 1.25rem);
     border: 2px solid rgba(33, 30, 32, .88);
     border-radius: 13px;
@@ -162,6 +179,10 @@
     -webkit-line-clamp: 2;
 }
 
+.dashboard-card:last-child .number {
+    -webkit-line-clamp: 1;
+}
+
 .dashboard-card .event-count {
     display: block;
     font-size: clamp(2.6rem, 4vw, 3.5rem);
@@ -202,7 +223,7 @@
     outline-offset: 3px;
 }
 
-@media (max-width: 700px) {
+@media (max-width: 820px) {
     .grizzly-home {
         padding: 2rem 1rem 2.5rem;
     }
@@ -215,7 +236,7 @@
     .dashboard-grid {
         grid-template-columns: 1fr;
         max-width: 28rem;
-        margin-top: 2rem;
+        margin-top: 1.5rem;
     }
 
     .competition-message + .dashboard-grid {
@@ -224,6 +245,25 @@
 
     .dashboard-card {
         min-height: 12rem;
+    }
+
+    .dashboard-card:last-child .number {
+        -webkit-line-clamp: 2;
+    }
+
+    .home-error-banner {
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: .65rem .8rem;
+    }
+
+    .home-error-code {
+        grid-column: 2;
+        justify-self: start;
+    }
+
+    .home-error-banner .dashboard-button {
+        grid-column: 1 / -1;
+        justify-self: start;
     }
 }
 

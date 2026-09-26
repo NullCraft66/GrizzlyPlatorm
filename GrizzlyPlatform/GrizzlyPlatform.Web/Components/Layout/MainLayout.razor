@@ -1,5 +1,5 @@
 @inherits LayoutComponentBase
-@implements IDisposable
+@implements IAsyncDisposable
 @inject GrizzlyPlatform.Web.Services.EasterEggService EasterEggs
 @inject GrizzlyPlatform.Web.Services.AuthState AuthState
 
@@ -14,15 +14,14 @@
             <span></span><span></span><span></span>
         </button>
         <button class="app-title app-title-button" @onclick="RevealEasterEgg">GrizzlyPlatform</button>
-        <span class="app-subtitle">Scouting Platform</span>
     </header>
 
     <div class="app-body">
         <aside id="primary-navigation"
                class="navigation-drawer @(navigationOpen ? "open" : "")"
                aria-label="Primary navigation"
-               aria-hidden="@(navigationOpen ? "false" : "true")"
-               inert="@(navigationOpen ? null : "inert")">
+               aria-hidden="@(!navigationOpen ? "true" : "false")"
+               inert="@(!navigationOpen ? "inert" : null)">
             <NavMenu OnNavigate="CloseNavigation" />
         </aside>
         @if (navigationOpen)
@@ -139,31 +138,17 @@
     private string konamiBuffer = string.Empty;
     private string currentJoke = string.Empty;
     private string secretBuffer = string.Empty;
-    private string EnvironmentName => "Desktop/LAN";
-    private string PlatformName => System.Runtime.InteropServices.RuntimeInformation.OSDescription;
-    private string RuntimeName => System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription;
+    private string EnvironmentName => "Browser-based client";
+    private string PlatformName => "WebAssembly";
+    private string RuntimeName => ".NET WebAssembly";
     private string OpenedAt => DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-    private string GitHubCommit => "ce5b765";
-    private string DesktopPublishNumber => "1";
-    private string BuildVersion => $"1.{GitHubCommit}.{DesktopPublishNumber}";
+    private string GitHubCommit => "Not embedded in this build";
+    private string DesktopPublishNumber => "Not applicable to static web builds";
+    private string BuildVersion => "WebAssembly client";
     private string GitHubRepository => "https://github.com/NullCraft66/GrizzlyPlatorm";
-    private string NetworkName => "LAN";
-    private string ConnectedDevices => "1 (current session)";
-    private string HostIpAddress => GetHostIpAddress();
-
-    private static string GetHostIpAddress()
-    {
-        try
-        {
-            return System.Net.Dns.GetHostEntry(System.Net.Dns.GetHostName()).AddressList
-                .FirstOrDefault(address => address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork && !System.Net.IPAddress.IsLoopback(address))?.ToString()
-                ?? "127.0.0.1";
-        }
-        catch
-        {
-            return "Unavailable";
-        }
-    }
+    private string NetworkName => "Managed by the browser";
+    private string ConnectedDevices => "Not available to this client";
+    private string HostIpAddress => "Hidden by browser privacy";
 
     protected override void OnInitialized()
     {
@@ -180,10 +165,11 @@
         });
     }
 
-    public void Dispose()
+    public ValueTask DisposeAsync()
     {
         EasterEggs.DeveloperPanelRequested -= ShowDeveloperPanel;
         EasterEggs.ScreensaverRequested -= ShowScreensaver;
+        return ValueTask.CompletedTask;
     }
 
     private void ToggleNavigation() => navigationOpen = !navigationOpen;
@@ -271,4 +257,3 @@
         "A good scout never loses track of the data�or the snack table."
     };
 }
-
