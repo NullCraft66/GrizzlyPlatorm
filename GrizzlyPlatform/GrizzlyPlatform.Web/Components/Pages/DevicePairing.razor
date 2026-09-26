@@ -8,7 +8,9 @@
         <div>
             <div class="eyebrow">DEVICE SETUP</div>
             <h1>Pair scouting devices</h1>
-            <p>Connect tablets to this host without typing an IP address. Keep the host and tablets on the same private Wi-Fi network.</p>
+            <p>@(pairing?.LocalNetwork == false
+                    ? "Connect tablets using the hosted HTTPS address, even when they are on a different network."
+                    : "Connect tablets to this host without typing an IP address. Keep the host and tablets on the same private Wi-Fi network.")</p>
         </div>
         <div class="pairing-status"><span class="status-dot"></span> Host ready</div>
     </div>
@@ -41,18 +43,37 @@
         <section class="connection-details">
             <h2>Connection details</h2>
             <div class="details-grid">
-                <div><span>Local host name</span><strong>@pairing.Mdns</strong></div>
-                <div><span>API port</span><strong>TCP 5263</strong></div>
-                <div><span>Discovery</span><strong>UDP 5264 + mDNS</strong></div>
+                @if (pairing.LocalNetwork)
+                {
+                    <div><span>Local host name</span><strong>@pairing.Mdns</strong></div>
+                    <div><span>API port</span><strong>TCP 5263</strong></div>
+                    <div><span>Discovery</span><strong>UDP 5264 + mDNS</strong></div>
+                }
+                else
+                {
+                    <div><span>Connection</span><strong>Hosted API</strong></div>
+                    <div><span>Transport</span><strong>HTTPS</strong></div>
+                    <div><span>Address</span><strong>@pairing.Address</strong></div>
+                }
             </div>
         </section>
 
-        <div class="pairing-help"><strong>Having trouble?</strong> Make sure Windows Firewall allows TCP 5263 and UDP 5264, and that the network does not isolate connected devices.</div>
+        <div class="pairing-help">
+            <strong>Having trouble?</strong>
+            @if (pairing.LocalNetwork)
+            {
+                <span>Make sure Windows Firewall allows TCP 5263 and UDP 5264, and that the network does not isolate connected devices.</span>
+            }
+            else
+            {
+                <span>Check that the hosted API address is configured and the device has internet access.</span>
+            }
+        </div>
     }
 </div>
 
 @code {
     private PairingInfo? pairing;
     protected override async Task OnInitializedAsync() => pairing = await Api.GetFromJsonAsync<PairingInfo>("api/discovery/pairing");
-    private sealed record PairingInfo(string Name, string Id, string Address, string Mdns, string Qr);
+    private sealed record PairingInfo(string Name, string Id, string Address, string Mdns, string Qr, bool LocalNetwork = true);
 }

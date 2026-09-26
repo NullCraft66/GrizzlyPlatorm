@@ -1,6 +1,7 @@
 using GrizzlyPlatform.Api.Data;
 using GrizzlyPlatform.Api.Models;
 using GrizzlyPlatform.Api.Services;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,6 +11,13 @@ builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, relo
 builder.Services.AddDbContext<GrizzlyDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("Default") ?? "Data Source=grizzlyplatform.db"));
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddDataProtection();
+builder.Services.AddSingleton<NexusSettingsStore>();
+builder.Services.AddHttpClient<NexusService>(client =>
+{
+    client.BaseAddress = new Uri("https://frc.nexus/api/v1/");
+    client.Timeout = TimeSpan.FromSeconds(15);
+});
 
 builder.Services.AddHttpClient<TheBlueAllianceService>(client =>
 {
@@ -18,8 +26,12 @@ builder.Services.AddHttpClient<TheBlueAllianceService>(client =>
 
 builder.Services.AddScoped<EventSyncService>();
 builder.Services.AddHostedService<LiveEventSyncService>();
-builder.Services.AddHostedService<HostDiscoveryService>();
-builder.Services.AddHostedService<MdnsAdvertisementService>();
+
+if (builder.Configuration.GetValue("LocalNetwork:Enabled", true))
+{
+    builder.Services.AddHostedService<HostDiscoveryService>();
+    builder.Services.AddHostedService<MdnsAdvertisementService>();
+}
 
 builder.Services.AddCors(options =>
 {
@@ -84,6 +96,3 @@ app.UseCors("ScoutingClients");
 app.MapControllers();
 
 app.Run();
-
-
-
