@@ -5,330 +5,322 @@
 @inject HttpClient Http
 @inject GrizzlyPlatform.Web.Services.AuthState AuthState
 
-<PageTitle>Events</PageTitle>
+<PageTitle>Events | GrizzlyPlatform</PageTitle>
 
-<h1>Events</h1>
-@if (!string.IsNullOrWhiteSpace(syncMessage))
-{
-    <div class="alert @(syncError ? "alert-danger" : "alert-success")">@syncMessage</div>
-}
-
-<button type="button" @onclick="ShowAddForm">
-    + Add Event
-</button>
-
-@if (showForm)
-{
-    <div class="event-form">
-        <h2>@(editingEvent ? "Edit Event" : "Add Event")</h2>
-
+<div class="events-page">
+    <header class="events-page-header">
         <div>
-            <label>Event Name</label>
-            <input @bind="newEvent.Name" />
-        </div>
-
-        <div>
-            <label>Location</label>
-            <input @bind="newEvent.Location" />
-        </div>
-
-        <div>
-            <label>Season</label>
-            <select @bind="newEvent.SeasonId">
-                <option value="0">Select a season</option>
-
-                @foreach (var season in seasons)
+            <p class="page-eyebrow">COMPETITION MANAGEMENT</p>
+            <div class="events-title-row">
+                <h1>Events</h1>
+                @if (events is not null)
                 {
-                    <option value="@season.Id">
-                        @season.Year @season.Name
-                    </option>
+                    <span class="event-total">@events.Count total</span>
                 }
-            </select>
+            </div>
+            <p class="page-description">Manage event details, team and match data, and scouting operations.</p>
         </div>
-
-        <div>
-            <label>Event Type</label>
-            <select @bind="newEvent.EventType">
-                <option value="Competition">Competition</option>
-                <option value="Offseason">Offseason</option>
-            </select>
-        </div>
-
-        <div>
-            <label>Alliance Count</label>
-            <input type="number" min="1" max="32" @bind="newEvent.AllianceCount" />
-            <small>Number of alliance captains used during Alliance Selection.</small>
-        </div>
-
-        <div>
-            <label>Blue Alliance Key</label>
-            <input @bind="newEvent.BlueAllianceKey" />
-        </div>
-
-        <button type="button" @onclick="SaveEvent">
-            @(editingEvent ? "Save Changes" : "Create Event")
+        <button type="button" class="event-button event-button-primary" @onclick="ShowAddForm">
+            <span aria-hidden="true">+</span> Add Event
         </button>
+    </header>
 
-        <button type="button" @onclick="CancelForm">
-            Cancel
-        </button>
-    </div>
-}
-
-@if (events == null)
-{
-    <p>Loading events...</p>
-}
-else if (events.Count == 0)
-{
-    <p>No events have been added yet.</p>
-}
-else
-{
-    @foreach (var seasonGroup in events
-        .Where(e => e.Season != null)
-        .GroupBy(e => e.Season!.Id)
-        .OrderByDescending(g => g.First().Season!.Year))
+    @if (!string.IsNullOrWhiteSpace(syncMessage))
     {
-        var season = seasonGroup.First().Season!;
-
-        <details class="season-section">
-            <summary>
-                <strong>
-                    @season.Year @season.Name
-                </strong>
-
-                <span>
-                    @seasonGroup.Count()
-                    event@(seasonGroup.Count() == 1 ? "" : "s")
-                </span>
-            </summary>
-
-            <div class="season-events">
-
-                @foreach (var eventItem in seasonGroup)
-                {
-                    <div class="event-card">
-
-                        <!-- EVENT INFORMATION -->
-
-                        <h2>@eventItem.Name</h2>
-
-                        <p>
-                            <strong>Location:</strong>
-                            @eventItem.Location
-                        </p>
-
-                        <p>
-                            <strong>Event Type:</strong>
-                            @eventItem.EventType
-                        </p>
-
-                        <p>
-                            <strong>Blue Alliance Key:</strong>
-                            @eventItem.BlueAllianceKey
-                        </p>
-
-
-                        @if (AuthState.IsLoggedIn)
-                        {
-                            <a href="@($"/event-operations?eventId={eventItem.Id}")">Event Operations / recovery controls</a>
-                        }
-
-                       <div class="event-buttons">
-    <a class="btn btn-outline-primary" href="device-configuration">Set active on devices</a>
-
-    <button type="button"
-            @onclick="() => SyncTeams(eventItem.Id)">
-        Sync Teams
-    </button>
-
-    <button type="button"
-            @onclick="() => SyncNow(eventItem.Id)">
-        Sync Now
-    </button>
-                            <a href="@($"/events/{eventItem.Id}/teams")">
-                                View Teams
-                            </a>
-
-                            <button type="button"
-                                    @onclick="() => StartEdit(eventItem)">
-                                Edit
-                            </button>
-
-                            <button type="button"
-                                    @onclick="() => ConfirmDelete(eventItem)">
-                                Delete
-                            </button>
-
-                        </div>
-
-
-                        <!-- DELETE CONFIRMATION -->
-
-                        @if (eventPendingDelete?.Id == eventItem.Id)
-                        {
-                            <div class="delete-confirmation">
-
-                                <h3>Delete Event?</h3>
-
-                                <p>
-                                    Are you sure you want to delete
-                                    <strong>@eventItem.Name</strong>?
-                                </p>
-
-                                <button type="button"
-                                        @onclick="DeleteEvent">
-                                    Yes, Delete
-                                </button>
-
-                                <button type="button"
-                                        @onclick="CancelDelete">
-                                    Cancel
-                                </button>
-
-                            </div>
-                        }
-
-
-                        <!-- MATCHES -->
-
-                        <div class="event-matches">
-
-                            <div class="matches-header">
-
-                                <h3>Matches</h3>
-
-                                @if (eventMatches.ContainsKey(eventItem.Id))
-                                {
-                                    @if (expandedMatches.Contains(eventItem.Id))
-                                    {
-                                        <button type="button"
-                                                @onclick="() => HideMatches(eventItem.Id)">
-                                            Hide Matches
-                                        </button>
-                                    }
-                                    else
-                                    {
-                                        <button type="button"
-                                                @onclick="() => ShowMatches(eventItem.Id)">
-                                            Show Matches
-                                        </button>
-                                    }
-                                }
-                                else
-                                {
-                                    <button type="button"
-                                            @onclick="() => LoadMatches(eventItem.Id)">
-                                        Load Matches
-                                    </button>
-                                }
-
-                            </div>
-
-
-                            <!-- MATCH LIST -->
-
-                            @if (expandedMatches.Contains(eventItem.Id))
-                            {
-                                var matches = eventMatches[eventItem.Id];
-
-<div class="match-filters">
-
-    <label for="matchType">Match Type:</label>
-
-    <select id="matchType"
-            @bind="matchFilters[eventItem.Id]">
-
-        <option value="All">All</option>
-        <option value="Qualification">Qualification</option>
-        <option value="Semifinal">Semifinal</option>
-        <option value="Final">Final</option>
-
-    </select>
-
-    <label for="teamSearch">Team:</label>
-
-    <input id="teamSearch"
-           type="number"
-           placeholder="Team number"
-           @bind="teamFilters[eventItem.Id]" />
-
-</div>
-
-                                @if (matches.Count == 0)
-                                {
-                                    <p>No matches have been added for this event.</p>
-                                }
-                                else
-                                {
-                                    <div class="match-list">
-
-@foreach (var match in matches
-    .Where(m =>
-        (!matchFilters.ContainsKey(eventItem.Id) ||
-         matchFilters[eventItem.Id] == "All" ||
-         m.MatchType == matchFilters[eventItem.Id])
-        &&
-        (!teamFilters.ContainsKey(eventItem.Id) ||
-         string.IsNullOrWhiteSpace(teamFilters[eventItem.Id]) ||
-         m.RedTeam1?.TeamNumber.ToString() == teamFilters[eventItem.Id] ||
-         m.RedTeam2?.TeamNumber.ToString() == teamFilters[eventItem.Id] ||
-         m.RedTeam3?.TeamNumber.ToString() == teamFilters[eventItem.Id] ||
-         m.BlueTeam1?.TeamNumber.ToString() == teamFilters[eventItem.Id] ||
-         m.BlueTeam2?.TeamNumber.ToString() == teamFilters[eventItem.Id] ||
-         m.BlueTeam3?.TeamNumber.ToString() == teamFilters[eventItem.Id]))
-    .OrderBy(m => m.MatchType)
-    .ThenBy(m => m.MatchNumber)
-    .ThenBy(m => m.SetNumber))
-                                        {
-                                            <div class="match-card">
-  <h4>
-    @match.MatchType @(match.MatchType == "Semifinal" ? match.SetNumber : match.MatchNumber)
-</h4>
-
-    @if (!string.IsNullOrWhiteSpace(match.WinningAlliance))
-    {
-        <div class="match-winner"><strong>Winner:</strong> @match.WinningAlliance</div>
+        <div class="sync-notice @(syncError ? "sync-notice-error" : "sync-notice-success")"
+             role="@(syncError ? "alert" : "status")"
+             aria-live="polite">
+            <span class="sync-status-dot" aria-hidden="true"></span>
+            <span>@syncMessage</span>
+        </div>
     }
 
-    <div class="match-score-line">
-        <span class="blue-score">@match.BlueScore</span>
-        <span class="score-divider">-</span>
-        <span class="red-score">@match.RedScore</span>
-    </div>
-
-    <div class="match-teams-grid">
-        <div class="match-side blue-side">
-            <strong class="side-title">Blue</strong>
-            <span>Team @match.BlueTeam1?.TeamNumber</span>
-            <span>Team @match.BlueTeam2?.TeamNumber</span>
-            <span>Team @match.BlueTeam3?.TeamNumber</span>
-        </div>
-        <div class="match-side red-side">
-            <strong class="side-title">Red</strong>
-            <span>Team @match.RedTeam1?.TeamNumber</span>
-            <span>Team @match.RedTeam2?.TeamNumber</span>
-            <span>Team @match.RedTeam3?.TeamNumber</span>
-        </div>
-    </div>
-</div>
-                                        }
-
-                                    </div>
-                                }
-                            }
-
-                        </div>
-
-                    </div>
-                }
-
+    @if (showForm)
+    {
+        <section class="event-form" aria-labelledby="event-form-title">
+            <div class="event-form-header">
+                <div>
+                    <p class="page-eyebrow">EVENT SETUP</p>
+                    <h2 id="event-form-title">@(editingEvent ? "Edit Event" : "Add Event")</h2>
+                    <p>Set the event details used by scouting, schedules, and team imports.</p>
+                </div>
             </div>
 
-        </details>
+            @if (!string.IsNullOrWhiteSpace(formError))
+            {
+                <div class="form-error" role="alert">@formError</div>
+            }
+
+            <div class="event-form-grid">
+                <div class="form-field form-field-wide">
+                    <label for="event-name">Event Name</label>
+                    <input id="event-name" class="form-control" autocomplete="off" @bind="newEvent.Name" />
+                </div>
+
+                <div class="form-field">
+                    <label for="event-location">Location</label>
+                    <input id="event-location" class="form-control" autocomplete="address-level2" @bind="newEvent.Location" />
+                </div>
+
+                <div class="form-field">
+                    <label for="event-season">Season</label>
+                    <select id="event-season" class="form-select" @bind="newEvent.SeasonId">
+                        <option value="0">Select a season</option>
+                        @foreach (var season in seasons)
+                        {
+                            <option value="@season.Id">@season.Year @season.Name</option>
+                        }
+                    </select>
+                    @if (seasons.Count == 0)
+                    {
+                        <small class="field-hint">Create a season before adding an event. <NavLink href="seasons">Manage seasons</NavLink></small>
+                    }
+                </div>
+
+                <div class="form-field">
+                    <label for="event-type">Event Type</label>
+                    <select id="event-type" class="form-select" @bind="newEvent.EventType">
+                        <option value="Competition">Competition</option>
+                        <option value="Offseason">Offseason</option>
+                    </select>
+                </div>
+
+                <div class="form-field">
+                    <label for="event-start-date">Start Date <span class="optional-label">Optional</span></label>
+                    <InputDate TValue="DateTime?" id="event-start-date" class="form-control" @bind-Value="newEvent.StartDate" />
+                </div>
+
+                <div class="form-field">
+                    <label for="event-end-date">End Date <span class="optional-label">Optional</span></label>
+                    <InputDate TValue="DateTime?" id="event-end-date" class="form-control" @bind-Value="newEvent.EndDate" />
+                </div>
+
+                <div class="form-field">
+                    <label for="event-alliance-count">Alliance Count</label>
+                    <input id="event-alliance-count" class="form-control" type="number" min="1" max="32"
+                           aria-describedby="alliance-count-hint" @bind="newEvent.AllianceCount" />
+                    <small id="alliance-count-hint" class="field-hint">Number of alliances used during Alliance Selection.</small>
+                </div>
+
+                <div class="form-field">
+                    <label for="event-blue-alliance-key">The Blue Alliance Event Key <span class="optional-label">Optional</span></label>
+                    <input id="event-blue-alliance-key" class="form-control" autocomplete="off" @bind="newEvent.BlueAllianceKey" />
+                    <small class="field-hint">Used to import this event’s teams, matches, and rankings.</small>
+                </div>
+            </div>
+
+            <div class="event-form-actions">
+                <button type="button" class="event-button event-button-primary" @onclick="SaveEvent">
+                    @(editingEvent ? "Save Changes" : "Create Event")
+                </button>
+                <button type="button" class="event-button event-button-secondary" @onclick="CancelForm">Cancel</button>
+            </div>
+        </section>
     }
-}
+
+    @if (events == null)
+    {
+        <div class="events-state" role="status">
+            <span class="loading-indicator" aria-hidden="true"></span>
+            <p>Loading events…</p>
+        </div>
+    }
+    else if (events.Count == 0)
+    {
+        <section class="events-state events-empty-state">
+            <div class="empty-state-mark" aria-hidden="true">+</div>
+            <h2>No events yet</h2>
+            <p>Add an event to start organizing teams, matches, and scouting data.</p>
+            <button type="button" class="event-button event-button-primary" @onclick="ShowAddForm">Add your first event</button>
+        </section>
+    }
+    else
+    {
+        <div class="season-list">
+            @foreach (var seasonGroup in events
+                .Where(e => e.Season != null)
+                .GroupBy(e => e.Season!.Id)
+                .OrderByDescending(g => g.First().Season!.Year))
+            {
+                var season = seasonGroup.First().Season!;
+
+                <details class="season-section">
+                    <summary class="season-summary">
+                        <span class="season-summary-title">
+                            <span class="page-eyebrow">SEASON</span>
+                            <strong>@season.Year @season.Name</strong>
+                        </span>
+                        <span class="season-event-count">@seasonGroup.Count() event@(seasonGroup.Count() == 1 ? "" : "s")</span>
+                    </summary>
+
+                    <div class="season-events">
+                        @foreach (var eventItem in seasonGroup)
+                        {
+                            <article class="event-card">
+                                <div class="event-card-header">
+                                    <div>
+                                        <p class="page-eyebrow">@eventItem.Season?.Year @eventItem.Season?.Name</p>
+                                        <h2>@eventItem.Name</h2>
+                                    </div>
+                                    <span class="event-type-badge">@eventItem.EventType</span>
+                                </div>
+
+                                <dl class="event-details">
+                                    <div>
+                                        <dt>Location</dt>
+                                        <dd>@(string.IsNullOrWhiteSpace(eventItem.Location) ? "Not set" : eventItem.Location)</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Dates</dt>
+                                        <dd>@FormatEventDateRange(eventItem)</dd>
+                                    </div>
+                                    <div class="event-key-detail">
+                                        <dt>The Blue Alliance</dt>
+                                        <dd>@(string.IsNullOrWhiteSpace(eventItem.BlueAllianceKey) ? "Event key not set" : eventItem.BlueAllianceKey)</dd>
+                                    </div>
+                                </dl>
+
+                                @if (AuthState.IsLoggedIn)
+                                {
+                                    <a class="event-operations-link" href="@($"/event-operations?eventId={eventItem.Id}")">Event Operations and recovery controls</a>
+                                }
+
+                                <div class="event-actions" role="group" aria-label="Actions for @eventItem.Name">
+                                    <a class="event-action event-action-secondary" href="device-configuration">Set active on devices</a>
+                                    <button type="button" class="event-action event-action-secondary" @onclick="() => SyncTeams(eventItem.Id)">Sync Teams</button>
+                                    <button type="button" class="event-action event-action-primary" @onclick="() => SyncNow(eventItem.Id)">Sync Now</button>
+                                    <a class="event-action event-action-secondary" href="@($"/events/{eventItem.Id}/teams")">View Teams</a>
+                                    <button type="button" class="event-action event-action-secondary" @onclick="() => StartEdit(eventItem)">Edit</button>
+                                    <button type="button" class="event-action event-action-danger" @onclick="() => ConfirmDelete(eventItem)">Delete</button>
+                                </div>
+
+                                @if (eventPendingDelete?.Id == eventItem.Id)
+                                {
+                                    <div class="delete-confirmation" role="group" aria-labelledby="delete-event-title">
+                                        <div>
+                                            <h3 id="delete-event-title">Delete this event?</h3>
+                                            <p>Delete <strong>@eventItem.Name</strong>? This cannot be undone.</p>
+                                        </div>
+                                        <div class="confirmation-actions">
+                                            <button type="button" class="event-action event-action-danger" @onclick="DeleteEvent">Yes, Delete Event</button>
+                                            <button type="button" class="event-action event-action-secondary" @onclick="CancelDelete">Keep Event</button>
+                                        </div>
+                                    </div>
+                                }
+
+                                <section class="event-matches" aria-label="Match schedule for @eventItem.Name">
+                                    <div class="matches-header">
+                                        <div>
+                                            <h3>Match Schedule</h3>
+                                            <p>Blue Alliance match data refreshes while this schedule is open.</p>
+                                        </div>
+
+                                        @if (eventMatches.ContainsKey(eventItem.Id))
+                                        {
+                                            @if (expandedMatches.Contains(eventItem.Id))
+                                            {
+                                                <button type="button" class="event-action event-action-secondary" @onclick="() => HideMatches(eventItem.Id)">Hide Matches</button>
+                                            }
+                                            else
+                                            {
+                                                <button type="button" class="event-action event-action-secondary" @onclick="() => ShowMatches(eventItem.Id)">Show Matches</button>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <button type="button" class="event-action event-action-secondary" @onclick="() => LoadMatches(eventItem.Id)">Load Matches</button>
+                                        }
+                                    </div>
+
+                                    @if (expandedMatches.Contains(eventItem.Id))
+                                    {
+                                        var matches = eventMatches[eventItem.Id];
+
+                                        <div class="match-filters">
+                                            <div class="form-field">
+                                                <label for="match-type-@eventItem.Id">Match Type</label>
+                                                <select id="match-type-@eventItem.Id" class="form-select" @bind="matchFilters[eventItem.Id]">
+                                                    <option value="All">All matches</option>
+                                                    <option value="Qualification">Qualification</option>
+                                                    <option value="Semifinal">Semifinal</option>
+                                                    <option value="Final">Final</option>
+                                                </select>
+                                            </div>
+                                            <div class="form-field">
+                                                <label for="team-search-@eventItem.Id">Filter by team</label>
+                                                <input id="team-search-@eventItem.Id" class="form-control" type="number"
+                                                       inputmode="numeric" placeholder="Team number" @bind="teamFilters[eventItem.Id]" />
+                                            </div>
+                                        </div>
+
+                                        @if (matches.Count == 0)
+                                        {
+                                            <p class="matches-empty-state">No matches have been added for this event.</p>
+                                        }
+                                        else
+                                        {
+                                            <div class="match-list">
+                                                @foreach (var match in matches
+                                                    .Where(m =>
+                                                        (!matchFilters.ContainsKey(eventItem.Id) ||
+                                                         matchFilters[eventItem.Id] == "All" ||
+                                                         m.MatchType == matchFilters[eventItem.Id])
+                                                        &&
+                                                        (!teamFilters.ContainsKey(eventItem.Id) ||
+                                                         string.IsNullOrWhiteSpace(teamFilters[eventItem.Id]) ||
+                                                         m.RedTeam1?.TeamNumber.ToString() == teamFilters[eventItem.Id] ||
+                                                         m.RedTeam2?.TeamNumber.ToString() == teamFilters[eventItem.Id] ||
+                                                         m.RedTeam3?.TeamNumber.ToString() == teamFilters[eventItem.Id] ||
+                                                         m.BlueTeam1?.TeamNumber.ToString() == teamFilters[eventItem.Id] ||
+                                                         m.BlueTeam2?.TeamNumber.ToString() == teamFilters[eventItem.Id] ||
+                                                         m.BlueTeam3?.TeamNumber.ToString() == teamFilters[eventItem.Id]))
+                                                    .OrderBy(m => m.MatchType)
+                                                    .ThenBy(m => m.MatchNumber)
+                                                    .ThenBy(m => m.SetNumber))
+                                                {
+                                                    <article class="match-card">
+                                                        <div class="match-card-header">
+                                                            <h4>@match.MatchType @(match.MatchType == "Semifinal" ? match.SetNumber : match.MatchNumber)</h4>
+                                                            @if (!string.IsNullOrWhiteSpace(match.WinningAlliance))
+                                                            {
+                                                                <span class="match-winner">@match.WinningAlliance wins</span>
+                                                            }
+                                                        </div>
+
+                                                        <div class="match-score-line" role="group" aria-label="Blue @match.BlueScore, Red @match.RedScore">
+                                                            <span class="blue-score">@match.BlueScore</span>
+                                                            <span class="score-divider" aria-hidden="true">–</span>
+                                                            <span class="red-score">@match.RedScore</span>
+                                                        </div>
+
+                                                        <div class="match-teams-grid">
+                                                            <div class="match-side blue-side">
+                                                                <strong class="side-title">Blue Alliance</strong>
+                                                                <span>Team @match.BlueTeam1?.TeamNumber</span>
+                                                                <span>Team @match.BlueTeam2?.TeamNumber</span>
+                                                                <span>Team @match.BlueTeam3?.TeamNumber</span>
+                                                            </div>
+                                                            <div class="match-side red-side">
+                                                                <strong class="side-title">Red Alliance</strong>
+                                                                <span>Team @match.RedTeam1?.TeamNumber</span>
+                                                                <span>Team @match.RedTeam2?.TeamNumber</span>
+                                                                <span>Team @match.RedTeam3?.TeamNumber</span>
+                                                            </div>
+                                                        </div>
+                                                    </article>
+                                                }
+                                            </div>
+                                        }
+                                    }
+                                </section>
+                            </article>
+                        }
+                    </div>
+                </details>
+            }
+        </div>
+    }
+</div>
 
 
 @code {
@@ -346,6 +338,7 @@ private Dictionary<int, string> teamFilters = new();
 private HashSet<int> expandedMatches = new();
 
 private bool showForm;
+private string formError = string.Empty;
 private string syncMessage = string.Empty;
 private bool syncError;
 
@@ -415,10 +408,33 @@ public async ValueTask DisposeAsync()
             "api/seasons") ?? new List<SeasonModel>();
     }
 
+    private static string FormatEventDateRange(EventModel eventItem)
+    {
+        if (eventItem.StartDate is DateTime start && eventItem.EndDate is DateTime end)
+        {
+            return start.Date == end.Date
+                ? start.ToString("MMM d, yyyy")
+                : $"{start:MMM d} – {end:MMM d, yyyy}";
+        }
+
+        if (eventItem.StartDate is DateTime startOnly)
+        {
+            return $"Starts {startOnly:MMM d, yyyy}";
+        }
+
+        if (eventItem.EndDate is DateTime endOnly)
+        {
+            return $"Ends {endOnly:MMM d, yyyy}";
+        }
+
+        return "Dates not set";
+    }
+
 
     private void ShowAddForm()
     {
         editingEvent = false;
+        formError = string.Empty;
 
         newEvent = new EventModel();
 
@@ -434,6 +450,7 @@ public async ValueTask DisposeAsync()
     private void StartEdit(EventModel eventItem)
     {
         editingEvent = true;
+        formError = string.Empty;
 
         newEvent = new EventModel
         {
@@ -457,6 +474,7 @@ public async ValueTask DisposeAsync()
         showForm = false;
 
         editingEvent = false;
+        formError = string.Empty;
 
         newEvent = new EventModel();
     }
@@ -466,29 +484,47 @@ public async ValueTask DisposeAsync()
     {
         if (newEvent.SeasonId == 0)
         {
+            formError = "Choose a season for this event.";
             return;
         }
 
-        HttpResponseMessage response;
-
-        if (editingEvent)
+        if (string.IsNullOrWhiteSpace(newEvent.Name))
         {
-            response = await Http.PutAsJsonAsync(
-                $"api/events/{newEvent.Id}",
-                newEvent);
-        }
-        else
-        {
-            response = await Http.PostAsJsonAsync(
-                "api/events",
-                newEvent);
+            formError = "Enter an event name.";
+            return;
         }
 
-        if (response.IsSuccessStatusCode)
+        if (newEvent.StartDate.HasValue && newEvent.EndDate.HasValue
+            && newEvent.EndDate.Value.Date < newEvent.StartDate.Value.Date)
         {
-            CancelForm();
+            formError = "The end date must be on or after the start date.";
+            return;
+        }
 
-            await LoadEvents();
+        formError = string.Empty;
+
+        try
+        {
+            var response = editingEvent
+                ? await Http.PutAsJsonAsync($"api/events/{newEvent.Id}", newEvent)
+                : await Http.PostAsJsonAsync("api/events", newEvent);
+
+            if (response.IsSuccessStatusCode)
+            {
+                CancelForm();
+                await LoadEvents();
+                return;
+            }
+
+            formError = await response.Content.ReadAsStringAsync();
+            if (string.IsNullOrWhiteSpace(formError))
+            {
+                formError = "The event could not be saved. Check the details and try again.";
+            }
+        }
+        catch (HttpRequestException)
+        {
+            formError = "Could not reach the GrizzlyPlatform server. Check the connection and try again.";
         }
     }
 
@@ -726,9 +762,6 @@ public class MatchModel
         public string Name { get; set; } = "";
     }
 }
-
-
-
 
 
 
