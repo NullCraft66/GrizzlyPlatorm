@@ -10,11 +10,8 @@
     </div>
 </div>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
-
-<div class="nav-scrollable"
-     onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="flex-column">
+<div class="nav-scrollable">
+    <nav class="flex-column" aria-label="Platform pages" @onclick="OnNavigate">
 
   @if (AuthState.IsLoggedIn)
 {
@@ -142,6 +139,9 @@ else
 </div>
 
 @code {
+    [Parameter]
+    public EventCallback OnNavigate { get; set; }
+
     protected override void OnInitialized()
     {
         AuthState.OnChange += StateHasChanged;
@@ -158,7 +158,6 @@ else
         Navigation.NavigateTo("/login");
     }
 }
-
 
 
 

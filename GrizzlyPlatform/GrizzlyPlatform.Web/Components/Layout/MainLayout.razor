@@ -5,18 +5,29 @@
 
 <div class="app-shell @(konamiTheme ? "konami-theme" : "") @(AuthState.IsPinkAdmin ? "pink-theme" : "") @(AuthState.IsKimTheme ? "kim-theme" : "")" tabindex="0" autofocus @onkeydown="HandleSecretKey">
     <header class="app-header">
-        <button class="menu-button" aria-label="Toggle navigation" @onclick="ToggleNavigation"><span></span><span></span><span></span></button>
+        <button type="button"
+                class="menu-button @(navigationOpen ? "is-open" : "")"
+                aria-label="@(navigationOpen ? "Close navigation" : "Open navigation")"
+                aria-expanded="@(navigationOpen ? "true" : "false")"
+                aria-controls="primary-navigation"
+                @onclick="ToggleNavigation">
+            <span></span><span></span><span></span>
+        </button>
         <button class="app-title app-title-button" @onclick="RevealEasterEgg">GrizzlyPlatform</button>
         <span class="app-subtitle">Scouting Platform</span>
     </header>
 
     <div class="app-body">
-        <aside class="navigation-drawer @(navigationOpen ? "open" : "")">
-            <NavMenu />
+        <aside id="primary-navigation"
+               class="navigation-drawer @(navigationOpen ? "open" : "")"
+               aria-label="Primary navigation"
+               aria-hidden="@(navigationOpen ? "false" : "true")"
+               inert="@(navigationOpen ? null : "inert")">
+            <NavMenu OnNavigate="CloseNavigation" />
         </aside>
         @if (navigationOpen)
         {
-            <div class="drawer-backdrop" @onclick="CloseNavigation"></div>
+            <div class="drawer-backdrop" aria-hidden="true" @onclick="CloseNavigation"></div>
         }
         <main>
             <article class="content">@Body</article>
@@ -198,6 +209,12 @@
 
     private void HandleSecretKey(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs args)
     {
+        if (string.Equals(args.Key, "Escape", StringComparison.OrdinalIgnoreCase) && navigationOpen)
+        {
+            CloseNavigation();
+            return;
+        }
+
         if (args.CtrlKey && args.ShiftKey && string.Equals(args.Key, "C", StringComparison.OrdinalIgnoreCase))
         {
             creditsVisible = true;
@@ -254,6 +271,4 @@
         "A good scout never loses track of the data�or the snack table."
     };
 }
-
-
 
