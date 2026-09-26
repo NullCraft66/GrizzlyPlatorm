@@ -2,77 +2,151 @@
 @using System.Net.Http.Json
 @using GrizzlyPlatform.Web.Models
 @inject HttpClient Http
+@inject NavigationManager Navigation
 
-<PageTitle>Scouting</PageTitle>
+<PageTitle>Scouting | GrizzlyPlatform</PageTitle>
 
-<h1>Scouting</h1>
+<div class="scouting-page">
+    <header class="scouting-header">
+        <p class="scouting-eyebrow">GRIZZLY PLATFORM · STUDENT WORKFLOW</p>
+        <h1>Choose a scouting form</h1>
+        <p>Choose the form for the information you’re collecting, then start scouting.</p>
+    </header>
 
-@if (forms == null)
-{
-    <p>Loading scouting forms...</p>
-}
-else if (forms.Count == 0)
-{
-    <p>No scouting forms are available.</p>
-}
-else
-{
-    <div class="scouting-form-list">
-        @foreach (var form in forms)
-        {
-            <button class="scouting-form-button"
-                    @onclick="() => SelectForm(form)">
-                <strong>@form.Name</strong>
-                <span>@GetFormTypeName(form.FormType)</span>
-            </button>
-        }
-    </div>
-
-    @if (selectedForm != null)
+    @if (isLoading)
     {
-        <hr />
-
-        <h2>@selectedForm.Name</h2>
-        <p>@selectedForm.Description</p>
-
-        <p>
-            <strong>Fields:</strong>
-            @selectedForm.Fields.Count
-        </p>
+        <div class="scouting-state card" role="status">
+            <span class="scouting-spinner" aria-hidden="true"></span>
+            <span>Loading available scouting forms…</span>
+        </div>
     }
-}
+    else if (!string.IsNullOrWhiteSpace(loadError))
+    {
+        <section class="scouting-state card scouting-error" role="alert">
+            <h2>Forms aren’t available right now</h2>
+            <p>@loadError</p>
+            <button type="button" class="scouting-action-button" @onclick="LoadFormsAsync">Try again</button>
+        </section>
+    }
+    else if (forms.Count == 0)
+    {
+        <section class="scouting-state card">
+            <h2>No scouting forms yet</h2>
+            <p>Ask a platform administrator to add a game form before scouting.</p>
+        </section>
+    }
+    else
+    {
+        <div class="scouting-workspace @(selectedForm is null ? "single-column" : "with-selection")">
+            <section class="scouting-chooser" aria-labelledby="available-forms-heading">
+                <div class="scouting-section-heading">
+                    <div>
+                        <p class="scouting-eyebrow">STEP 1</p>
+                        <h2 id="available-forms-heading">Available forms</h2>
+                    </div>
+                    <span class="scouting-count">@forms.Count @(forms.Count == 1 ? "form" : "forms")</span>
+                </div>
+
+                <div class="scouting-form-list">
+                    @foreach (var form in forms)
+                    {
+                        var isSelected = selectedForm?.Id == form.Id;
+                        <button type="button"
+                                class="scouting-form-card card @(isSelected ? "selected" : "")"
+                                aria-pressed="@(isSelected ? "true" : "false")"
+                                @onclick="() => SelectForm(form)">
+                            <span class="scouting-form-meta">
+                                <span class="scouting-form-type">@GetFormTypeName(form.FormType)</span>
+                                <span class="scouting-field-count">@GetFieldCountText(form)</span>
+                            </span>
+                            <strong>@form.Name</strong>
+                            <span class="scouting-form-description">@GetFormDescription(form)</span>
+                            <span class="scouting-form-prompt">@(isSelected ? "Selected" : "Select this form")</span>
+                        </button>
+                    }
+                </div>
+            </section>
+
+            @if (selectedForm is not null)
+            {
+                <aside class="scouting-ready-card card" aria-labelledby="selected-form-heading">
+                    <p class="scouting-eyebrow">STEP 2 · READY TO START</p>
+                    <span class="scouting-form-type">@GetFormTypeName(selectedForm.FormType)</span>
+                    <h2 id="selected-form-heading">@selectedForm.Name</h2>
+                    <p>@GetFormDescription(selectedForm)</p>
+                    <div class="scouting-ready-detail">
+                        <span aria-hidden="true">☷</span>
+                        @GetFieldCountText(selectedForm) to complete
+                    </div>
+                    <button type="button" class="scouting-action-button" @onclick="StartScouting">
+                        Start scouting <span aria-hidden="true">→</span>
+                    </button>
+                </aside>
+            }
+        </div>
+    }
+</div>
 
 @code {
-    private List<GameFormModel>? forms;
+    private List<GameFormModel> forms = new();
     private GameFormModel? selectedForm;
+    private bool isLoading = true;
+    private string loadError = string.Empty;
 
-    protected override async Task OnInitializedAsync()
+    protected override Task OnInitializedAsync() => LoadFormsAsync();
+
+    private async Task LoadFormsAsync()
     {
+        isLoading = true;
+        loadError = string.Empty;
+
         try
         {
-            forms = await Http.GetFromJsonAsync<List<GameFormModel>>(
-                "api/GameForms");
-
-            forms ??= new List<GameFormModel>();
+            forms = await Http.GetFromJsonAsync<List<GameFormModel>>("api/GameForms") ?? new();
         }
-        catch
+        catch (HttpRequestException)
         {
-            forms = new List<GameFormModel>();
+            loadError = "Could not reach the GrizzlyPlatform API. Check the connection and try again.";
+        }
+        catch (TaskCanceledException)
+        {
+            loadError = "The server took too long to respond. Try again.";
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            loadError = "The server returned data that could not be read. Try again, or contact an administrator.";
+        }
+        finally
+        {
+            isLoading = false;
         }
     }
 
-    private void SelectForm(GameFormModel form)
+    private void SelectForm(GameFormModel form) => selectedForm = form;
+
+    private void StartScouting()
     {
-        selectedForm = form;
+        if (selectedForm is not null)
+        {
+            Navigation.NavigateTo($"/submissions/new?formId={selectedForm.Id}");
+        }
     }
 
-    private static string GetFormTypeName(int formType)
+    private static string GetFormDescription(GameFormModel form) =>
+        string.IsNullOrWhiteSpace(form.Description)
+            ? "Use this form to record scouting information for your team."
+            : form.Description;
+
+    private static string GetFieldCountText(GameFormModel form) =>
+        $"{GetVisibleFieldCount(form)} {(GetVisibleFieldCount(form) == 1 ? "question" : "questions")}";
+
+    private static int GetVisibleFieldCount(GameFormModel form) =>
+        form.Fields.Count(field => !field.IsSystemField || field.Question == "Team Name");
+
+    private static string GetFormTypeName(int formType) => formType switch
     {
-        return formType switch
-        {
-            0 => "Pit Scouting",
-            1 => "Match Scouting",
-            _ => "Unknown"
-        };
-    }
+        0 => "Pit scouting",
+        1 => "Match scouting",
+        _ => "Scouting form"
+    };
 }

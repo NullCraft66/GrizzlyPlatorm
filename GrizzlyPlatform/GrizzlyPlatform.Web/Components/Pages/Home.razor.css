@@ -55,6 +55,35 @@
     font-size: 1rem;
 }
 
+.home-error-state {
+    width: min(100%, 34rem);
+    box-sizing: border-box;
+    margin: 3rem 0 0;
+    padding: clamp(1.25rem, 3vw, 2rem);
+    border: 1px solid rgba(33, 30, 32, .2);
+    border-left: 6px solid #8f2d24;
+    border-radius: 12px;
+    background: #fffdf4;
+    box-shadow: 0 8px 22px rgba(33, 30, 32, .12);
+}
+
+.home-error-state h2 {
+    margin: 0;
+    color: #211e20;
+    font-size: 1.25rem;
+    font-weight: 850;
+}
+
+.home-error-state p {
+    margin: .65rem 0 1rem;
+    color: #615a4a;
+    line-height: 1.5;
+}
+
+.home-error-state .dashboard-button {
+    margin-top: 0;
+}
+
 .competition-message {
     width: min(100%, 72rem);
     box-sizing: border-box;
@@ -74,10 +103,11 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: clamp(1rem, 2vw, 1.5rem);
     margin: clamp(2.25rem, 5vh, 3.75rem) auto 0;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    box-shadow: none;
+    padding: clamp(.85rem, 1.6vw, 1.25rem);
+    border: 2px solid rgba(33, 30, 32, .88);
+    border-radius: 13px;
+    background: rgba(255, 253, 244, .08);
+    box-shadow: 0 10px 24px rgba(33, 30, 32, .08);
 }
 
 .competition-message + .dashboard-grid {

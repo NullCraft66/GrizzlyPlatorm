@@ -4,179 +4,216 @@
 @inject HttpClient Http
 @inject NavigationManager Navigation
 
-<PageTitle>New Submission</PageTitle>
+<PageTitle>New Scouting Submission | GrizzlyPlatform</PageTitle>
 
-<h1>New Scouting Submission</h1>
+<div class="submission-page">
+    <header class="submission-header">
+        <div>
+            <p class="submission-eyebrow">GRIZZLY PLATFORM · SCOUTING</p>
+            <h1>New scouting submission</h1>
+            <p>Enter the team and match details, then complete the form fields.</p>
+        </div>
+        <a class="submission-back-link" href="/scouting">← All scouting forms</a>
+    </header>
 
-@if (isLoading)
-{
-    <p>Loading...</p>
-}
-else if (forms.Count == 0)
-{
-    <p>No scouting forms are available.</p>
-}
-else
-{
-    <div class="mb-3">
-        <label class="form-label">Scouting Form</label>
-
-        <select class="form-select"
-                value="@selectedFormId"
-                @onchange="FormChanged">
-
-            <option value="0">Select a form...</option>
-
-            @foreach (var form in forms)
-            {
-                <option value="@form.Id">
-                    @form.Name
-                </option>
-            }
-        </select>
-    </div>
-
-    @if (selectedForm != null)
+    @if (isLoading)
     {
-        <div class="card p-3">
-            <h3>@selectedForm.Name</h3>
-
-            @if (!string.IsNullOrWhiteSpace(selectedForm.Description))
-            {
-                <p>@selectedForm.Description</p>
-            }
-
-            <hr />
-
-            <div class="mb-3">
-               <label class="form-label">
-    Team Number <span class="text-danger">*</span>
-</label>
-                <input type="number"
-                       class="form-control"
-                       @bind="teamNumber" />
-            </div>
-
-                       <div class="mb-3">
-<label class="form-label">
-    Scout Name <span class="text-danger">*</span>
-</label>                <input class="form-control"
-                       @bind="scoutName" />
-            </div>
-
-                      @if (selectedForm.FormType == 1)
-            {
-                <hr />
-
-                <h4>Match Information</h4>
-
-<div class="mb-3">
-    <label class="form-label">Event</label>
-
-    <select class="form-select"
-            value="@selectedEventId"
-            @onchange="EventChanged">
-
-        <option value="0">Select an event...</option>
-
-        @foreach (var eventItem in events)
-        {
-            <option value="@eventItem.Id">
-                @eventItem.Name
-            </option>
-        }
-    </select>
-</div>
-
-               <div class="mb-3">
-    <label class="form-label">Match</label>
-
-    <select class="form-select"
-            value="@selectedMatchId"
-            @onchange="MatchChanged"
-            disabled="@(selectedEventId == 0 || matches.Count == 0)">
-
-        <option value="0">
-            @(selectedEventId == 0
-                ? "Select an event first..."
-                : matches.Count == 0
-                    ? "No matches available"
-                    : "Select a match...")
-        </option>
-
-        @foreach (var match in matches)
-        {
-           <option value="@match.Id">
-    @if (match.MatchType == "Semifinal")
+        <div class="submission-state card" role="status">Loading scouting forms…</div>
+    }
+    else if (!string.IsNullOrWhiteSpace(loadError))
     {
-        @($"Semifinal {match.SetNumber}")
+        <section class="submission-state card submission-error" role="alert">
+            <h2>Could not load scouting forms</h2>
+            <p>@loadError</p>
+            <button type="button" class="submission-primary-button" @onclick="LoadDataAsync">Try again</button>
+        </section>
+    }
+    else if (forms.Count == 0)
+    {
+        <section class="submission-state card">
+            <h2>No scouting forms are available</h2>
+            <p>Ask a platform administrator to add a game form before scouting.</p>
+        </section>
     }
     else
     {
-       <option value="@match.Id">
-    @($"{match.MatchType} {match.MatchNumber}")
-</option>
-    }
-</option>
-        }
-    </select>
-</div>
+        <section class="submission-picker" aria-label="Choose a scouting form">
+            <label class="form-label" for="scouting-form-picker">Scouting form</label>
+            <select id="scouting-form-picker"
+                    class="form-select"
+                    value="@selectedFormId"
+                    @onchange="FormChanged">
+                <option value="0">Select a form…</option>
+                @foreach (var form in forms)
+                {
+                    <option value="@form.Id">@form.Name</option>
+                }
+            </select>
+        </section>
 
-               
-               
-            }
-
-            @foreach (var field in selectedForm.Fields.Where(f => !f.IsSystemField || f.Question == "Team Name").OrderBy(f => f.DisplayOrder))
-{
-    <div class="mb-3">
-        <label class="form-label">
-            @field.Question
-
-            @if (field.Required)
-            {
-                <span class="text-danger">*</span>
-            }
-        </label>
-
-        @if (!string.IsNullOrWhiteSpace(field.Description))
+        @if (selectedForm is not null)
         {
-            <div class="form-text">
-                @field.Description
-            </div>
+            <section class="submission-card card" aria-labelledby="submission-form-heading">
+                <header class="submission-card-header">
+                    <div>
+                        <span class="submission-type-badge">@GetFormTypeName(selectedForm.FormType)</span>
+                        <h2 id="submission-form-heading">@selectedForm.Name</h2>
+                        @if (!string.IsNullOrWhiteSpace(selectedForm.Description))
+                        {
+                            <p>@selectedForm.Description</p>
+                        }
+                    </div>
+                    <span class="submission-question-count">@GetVisibleFieldCount(selectedForm) questions</span>
+                </header>
+
+                <section class="submission-section" aria-labelledby="scout-details-heading">
+                    <div class="submission-section-heading">
+                        <span class="submission-step-number">01</span>
+                        <div>
+                            <h3 id="scout-details-heading">Scout and team</h3>
+                            <p>Identify who is submitting this scouting record.</p>
+                        </div>
+                    </div>
+                    <div class="submission-input-grid">
+                        <div class="mb-3">
+                            <label class="form-label" for="team-number-input">Team number <span class="text-danger">*</span></label>
+                            <input id="team-number-input"
+                                   type="number"
+                                   class="form-control"
+                                   min="1"
+                                   value="@teamNumber"
+                                   @onchange="TeamNumberChanged" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="scout-name-input">Scout name <span class="text-danger">*</span></label>
+                            <input id="scout-name-input"
+                                   class="form-control"
+                                   autocomplete="name"
+                                   @bind="scoutName" />
+                        </div>
+                    </div>
+                </section>
+
+                @if (selectedForm.FormType == 1)
+                {
+                    <section class="submission-section" aria-labelledby="match-details-heading">
+                        <div class="submission-section-heading">
+                            <span class="submission-step-number">02</span>
+                            <div>
+                                <h3 id="match-details-heading">Match information</h3>
+                                <p>Choose the event and match for this team.</p>
+                            </div>
+                        </div>
+                        <div class="submission-input-grid">
+                            <div class="mb-3">
+                                <label class="form-label" for="event-picker">Event</label>
+                                <select id="event-picker"
+                                        class="form-select"
+                                        value="@selectedEventId"
+                                        @onchange="EventChanged">
+                                    <option value="0">Select an event…</option>
+                                    @foreach (var eventItem in events)
+                                    {
+                                        <option value="@eventItem.Id">@eventItem.Name</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="match-picker">Match</label>
+                                <select id="match-picker"
+                                        class="form-select"
+                                        value="@selectedMatchId"
+                                        @onchange="MatchChanged"
+                                        disabled="@(selectedEventId == 0 || teamNumber <= 0 || matches.Count == 0 || isLoadingMatches)">
+                                    <option value="0">
+                                        @(selectedEventId == 0
+                                            ? "Select an event first…"
+                                            : teamNumber <= 0
+                                                ? "Enter a team number first…"
+                                                : isLoadingMatches
+                                                    ? "Loading matches…"
+                                                    : matches.Count == 0
+                                                        ? "No matches available"
+                                                        : "Select a match…")
+                                    </option>
+                                    @foreach (var match in matches)
+                                    {
+                                        <option value="@match.Id">@GetMatchLabel(match)</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+                    </section>
+                }
+
+                <section class="submission-section" aria-labelledby="form-questions-heading">
+                    <div class="submission-section-heading">
+                        <span class="submission-step-number">@(selectedForm.FormType == 1 ? "03" : "02")</span>
+                        <div>
+                            <h3 id="form-questions-heading">Scouting questions</h3>
+                            <p>Required questions are marked with an asterisk.</p>
+                        </div>
+                    </div>
+                    <div class="submission-question-list">
+                        @foreach (var field in selectedForm.Fields.Where(f => !f.IsSystemField || f.Question == "Team Name").OrderBy(f => f.DisplayOrder))
+                        {
+                            <div class="submission-question">
+                                @if (field.FieldType == 5)
+                                {
+                                    <div class="form-label">
+                                        @field.Question
+                                        @if (field.Required)
+                                        {
+                                            <span class="text-danger">*</span>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <label class="form-label" for="@GetFieldInputId(field)">
+                                        @field.Question
+                                        @if (field.Required)
+                                        {
+                                            <span class="text-danger">*</span>
+                                        }
+                                    </label>
+                                }
+                                @if (!string.IsNullOrWhiteSpace(field.Description))
+                                {
+                                    <div class="form-text">@field.Description</div>
+                                }
+                                @RenderField(field)
+                            </div>
+                        }
+                    </div>
+                </section>
+
+                @if (isLoadingMatches)
+                {
+                    <p class="submission-inline-status" role="status">Loading this team’s matches…</p>
+                }
+                @if (!string.IsNullOrWhiteSpace(errorMessage))
+                {
+                    <div class="alert alert-danger" role="alert">@errorMessage</div>
+                }
+                @if (!string.IsNullOrWhiteSpace(successMessage))
+                {
+                    <div class="alert alert-success" role="status">@successMessage</div>
+                }
+
+                <footer class="submission-actions">
+                    <button type="button"
+                            class="submission-primary-button"
+                            @onclick="SubmitForm"
+                            disabled="@isSubmitting">
+                        @(isSubmitting ? "Submitting…" : "Submit scouting data")
+                    </button>
+                    <button type="button" class="submission-secondary-button" @onclick="Cancel">Cancel</button>
+                </footer>
+            </section>
         }
-
-        @RenderField(field)
-    </div>
-}
-            @if (!string.IsNullOrWhiteSpace(errorMessage))
-            {
-                <div class="alert alert-danger">
-                    @errorMessage
-                </div>
-            }
-
-            @if (!string.IsNullOrWhiteSpace(successMessage))
-            {
-                <div class="alert alert-success">
-                    @successMessage
-                </div>
-            }
-
-          <div class="d-flex gap-3 mt-4">
-    <button class="btn btn-primary"
-            @onclick="SubmitForm"
-            disabled="@isSubmitting">
-        @(isSubmitting ? "Submitting..." : "Submit Scouting Data")
-    </button>
-
-      <button class="btn btn-secondary"
-            @onclick="Cancel">
-        Cancel
-    </button>
-</div>
-</div>
     }
-}
+</div>
 
 @code {
     private List<GameFormModel> forms = new();
@@ -187,6 +224,10 @@ private int selectedEventId = 0;
 private int selectedMatchId = 0;
     private bool isLoading = true;
     private bool isSubmitting = false;
+    private bool isLoadingMatches = false;
+
+    [SupplyParameterFromQuery(Name = "formId")]
+    public int? RequestedFormId { get; set; }
 
     private int selectedFormId = 0;
     private GameFormModel? selectedForm;
@@ -202,167 +243,219 @@ private string matchType = "";
 
     private string errorMessage = "";
     private string successMessage = "";
+    private string loadError = "";
 
- protected override async Task OnInitializedAsync()
-{
-    forms = await Http.GetFromJsonAsync<List<GameFormModel>>(
-        "api/GameForms")
-        ?? new List<GameFormModel>();
+    protected override Task OnInitializedAsync() => LoadDataAsync();
 
-    events = await Http.GetFromJsonAsync<List<EventModel>>(
-        "api/Events")
-        ?? new List<EventModel>();
-
-    isLoading = false;
-}
-
-
-  private void FormChanged(ChangeEventArgs e)
-{
-    selectedFormId = int.TryParse(
-        e.Value?.ToString(),
-        out var id)
-        ? id
-        : 0;
-
-    selectedForm = forms.FirstOrDefault(f => f.Id == selectedFormId);
-
-    // Clear previous scouting answers
-    answers.Clear();
-
-    // Clear previous match information
-    eventId = null;
-    matchNumber = null;
-    setNumber = null;
-    matchType = "";
-
-    errorMessage = "";
-    successMessage = "";
-}
-
-private async Task TeamNumberChanged()
-{
-    if (teamNumber <= 0)
+    private async Task LoadDataAsync()
     {
-        return;
+        isLoading = true;
+        loadError = "";
+
+        try
+        {
+            forms = await Http.GetFromJsonAsync<List<GameFormModel>>("api/GameForms") ?? new();
+            events = await Http.GetFromJsonAsync<List<EventModel>>("api/Events") ?? new();
+
+            selectedFormId = RequestedFormId.GetValueOrDefault();
+            selectedForm = forms.FirstOrDefault(form => form.Id == selectedFormId);
+            if (selectedForm is null)
+            {
+                selectedFormId = 0;
+            }
+        }
+        catch (HttpRequestException)
+        {
+            loadError = "Could not reach the GrizzlyPlatform API. Check the connection and try again.";
+        }
+        catch (TaskCanceledException)
+        {
+            loadError = "The server took too long to respond. Try again.";
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            loadError = "The server returned data that could not be read. Try again, or contact an administrator.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
 
-    var response = await Http.GetAsync(
-        $"api/Teams/number/{teamNumber}");
-
-    if (!response.IsSuccessStatusCode)
+    private void FormChanged(ChangeEventArgs e)
     {
-        errorMessage = $"Team {teamNumber} was not found.";
-        return;
+        selectedFormId = int.TryParse(e.Value?.ToString(), out var id) ? id : 0;
+        selectedForm = forms.FirstOrDefault(form => form.Id == selectedFormId);
+
+        answers.Clear();
+        selectedEventId = 0;
+        selectedMatchId = 0;
+        matches.Clear();
+        eventId = null;
+        matchNumber = null;
+        setNumber = null;
+        matchType = "";
+        errorMessage = "";
+        successMessage = "";
+        isLoadingMatches = false;
     }
 
-    var team = await response.Content.ReadFromJsonAsync<TeamModel>();
-
-    if (team == null)
+    private async Task TeamNumberChanged(ChangeEventArgs e)
     {
-        errorMessage = $"Team {teamNumber} was not found.";
-        return;
-    }
-
-    errorMessage = "";
-
-    // If an event is already selected, reload its matches.
-    if (selectedEventId > 0)
-    {
-        await LoadTeamMatches();
-    }
-}
-
-private async Task EventChanged(ChangeEventArgs e)
-{
-    selectedEventId = int.TryParse(
-        e.Value?.ToString(),
-        out var id)
-        ? id
-        : 0;
-
-    selectedMatchId = 0;
-    matches.Clear();
-
-    eventId = selectedEventId > 0
-        ? selectedEventId
-        : null;
-
-    matchNumber = null;
-    matchType = "";
-    setNumber = null;
-
-    if (selectedEventId > 0)
-    {
-        await LoadTeamMatches();
-    }
-}
-
-private async Task LoadTeamMatches()
-{
-    matches.Clear();
-    selectedMatchId = 0;
-    matchNumber = null;
-    matchType = "";
-    setNumber = null;
-
-    if (selectedEventId <= 0 || teamNumber <= 0)
-    {
-        return;
-    }
-
-    var teamResponse = await Http.GetAsync(
-        $"api/Teams/number/{teamNumber}");
-
-    if (!teamResponse.IsSuccessStatusCode)
-    {
-        errorMessage = $"Team {teamNumber} was not found.";
-        return;
-    }
-
-    var team = await teamResponse.Content
-        .ReadFromJsonAsync<TeamModel>();
-
-    if (team == null)
-    {
-        errorMessage = $"Team {teamNumber} was not found.";
-        return;
-    }
-
-    errorMessage = "";
-
-    var teamMatches =
-        await Http.GetFromJsonAsync<List<MatchModel>>(
-            $"api/Matches/team/{team.Id}")
-        ?? new List<MatchModel>();
-
-    matches = teamMatches
-        .Where(m => m.EventId == selectedEventId)
-        .ToList();
-}
-private void MatchChanged(ChangeEventArgs e)
-{
-    selectedMatchId = int.TryParse(
-        e.Value?.ToString(),
-        out var id)
-        ? id
-        : 0;
-
-    var selectedMatch = matches.FirstOrDefault(
-        m => m.Id == selectedMatchId);
-
-    if (selectedMatch == null)
-    {
+        teamNumber = int.TryParse(e.Value?.ToString(), out var number) ? number : 0;
+        selectedMatchId = 0;
+        matches.Clear();
         matchNumber = null;
         matchType = "";
         setNumber = null;
-        return;
+
+        if (teamNumber <= 0)
+        {
+            errorMessage = "";
+            return;
+        }
+
+        errorMessage = "";
+        if (selectedEventId > 0)
+        {
+            await LoadTeamMatches();
+            return;
+        }
+
+        try
+        {
+            var response = await Http.GetAsync($"api/Teams/number/{teamNumber}");
+            if (!response.IsSuccessStatusCode ||
+                await response.Content.ReadFromJsonAsync<TeamModel>() is null)
+            {
+                errorMessage = $"Team {teamNumber} was not found.";
+                return;
+            }
+
+            errorMessage = "";
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Could not verify this team. Check the API connection and try again.";
+        }
+        catch (TaskCanceledException)
+        {
+            errorMessage = "The server took too long to verify this team. Try again.";
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            errorMessage = "The server returned team data that could not be read.";
+        }
     }
 
-    matchNumber = selectedMatch.MatchNumber;
-    matchType = selectedMatch.MatchType;
-    setNumber = selectedMatch.SetNumber;
-}
+    private async Task EventChanged(ChangeEventArgs e)
+    {
+        selectedEventId = int.TryParse(e.Value?.ToString(), out var id) ? id : 0;
+        selectedMatchId = 0;
+        matches.Clear();
+        eventId = selectedEventId > 0 ? selectedEventId : null;
+        matchNumber = null;
+        matchType = "";
+        setNumber = null;
+        errorMessage = "";
+
+        if (selectedEventId > 0 && teamNumber > 0)
+        {
+            await LoadTeamMatches();
+        }
+    }
+
+    private async Task LoadTeamMatches()
+    {
+        matches.Clear();
+        selectedMatchId = 0;
+        matchNumber = null;
+        matchType = "";
+        setNumber = null;
+
+        if (selectedEventId <= 0 || teamNumber <= 0)
+        {
+            return;
+        }
+
+        isLoadingMatches = true;
+        errorMessage = "";
+        try
+        {
+            var teamResponse = await Http.GetAsync($"api/Teams/number/{teamNumber}");
+            if (!teamResponse.IsSuccessStatusCode)
+            {
+                errorMessage = $"Team {teamNumber} was not found.";
+                return;
+            }
+
+            var team = await teamResponse.Content.ReadFromJsonAsync<TeamModel>();
+            if (team is null)
+            {
+                errorMessage = $"Team {teamNumber} was not found.";
+                return;
+            }
+
+            var teamMatches = await Http.GetFromJsonAsync<List<MatchModel>>(
+                $"api/Matches/team/{team.Id}") ?? new();
+            matches = teamMatches.Where(match => match.EventId == selectedEventId).ToList();
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Could not load this team’s matches. Check the API connection and try again.";
+        }
+        catch (TaskCanceledException)
+        {
+            errorMessage = "The server took too long to load matches. Try again.";
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            errorMessage = "The server returned match data that could not be read.";
+        }
+        finally
+        {
+            isLoadingMatches = false;
+        }
+    }
+
+    private void MatchChanged(ChangeEventArgs e)
+    {
+        selectedMatchId = int.TryParse(e.Value?.ToString(), out var id) ? id : 0;
+        var selectedMatch = matches.FirstOrDefault(match => match.Id == selectedMatchId);
+
+        if (selectedMatch is null)
+        {
+            matchNumber = null;
+            matchType = "";
+            setNumber = null;
+            return;
+        }
+
+        matchNumber = selectedMatch.MatchNumber;
+        matchType = selectedMatch.MatchType;
+        setNumber = selectedMatch.SetNumber;
+    }
+
+    private static string GetFieldInputId(GameFormFieldModel field) => $"scouting-field-{field.Id}";
+
+    private static int GetVisibleFieldCount(GameFormModel form) =>
+        form.Fields.Count(field => !field.IsSystemField || field.Question == "Team Name");
+
+    private static string GetFieldInputId(GameFormFieldModel field, int optionId) =>
+        $"scouting-field-{field.Id}-option-{optionId}";
+
+    private static string GetFormTypeName(int formType) => formType switch
+    {
+        0 => "Pit scouting",
+        1 => "Match scouting",
+        _ => "Scouting form"
+    };
+
+    private static string GetMatchLabel(MatchModel match) =>
+        match.MatchType == "Semifinal"
+            ? $"Semifinal {match.SetNumber} · Match {match.MatchNumber}"
+            : $"{match.MatchType} {match.MatchNumber}";
+
     private RenderFragment RenderField(GameFormFieldModel field)
     {
         return builder =>
@@ -377,9 +470,10 @@ private void MatchChanged(ChangeEventArgs e)
             {
                 builder.OpenElement(0, "input");
                 builder.AddAttribute(1, "class", "form-control");
-                builder.AddAttribute(2, "value", value);
+                builder.AddAttribute(2, "id", GetFieldInputId(field));
+                builder.AddAttribute(3, "value", value);
                 builder.AddAttribute(
-                    3,
+                    4,
                     "oninput",
                     EventCallback.Factory.Create<ChangeEventArgs>(
                         this,
@@ -393,9 +487,10 @@ private void MatchChanged(ChangeEventArgs e)
                 builder.OpenElement(4, "input");
                 builder.AddAttribute(5, "type", "number");
                 builder.AddAttribute(6, "class", "form-control");
-                builder.AddAttribute(7, "value", value);
+                builder.AddAttribute(7, "id", GetFieldInputId(field));
+                builder.AddAttribute(8, "value", value);
                 builder.AddAttribute(
-                    8,
+                    9,
                     "oninput",
                     EventCallback.Factory.Create<ChangeEventArgs>(
                         this,
@@ -408,9 +503,10 @@ private void MatchChanged(ChangeEventArgs e)
             {
                 builder.OpenElement(9, "select");
                 builder.AddAttribute(10, "class", "form-select");
-                builder.AddAttribute(11, "value", value);
+                builder.AddAttribute(11, "id", GetFieldInputId(field));
+                builder.AddAttribute(12, "value", value);
                 builder.AddAttribute(
-                    12,
+                    13,
                     "onchange",
                     EventCallback.Factory.Create<ChangeEventArgs>(
                         this,
@@ -418,19 +514,19 @@ private void MatchChanged(ChangeEventArgs e)
                             field.Id,
                             e.Value?.ToString() ?? "")));
 
-                builder.OpenElement(13, "option");
-                builder.AddAttribute(14, "value", "");
-                builder.AddContent(15, "Select...");
+                builder.OpenElement(14, "option");
+                builder.AddAttribute(15, "value", "");
+                builder.AddContent(16, "Select...");
                 builder.CloseElement();
 
-                builder.OpenElement(16, "option");
-                builder.AddAttribute(17, "value", "Yes");
-                builder.AddContent(18, "Yes");
+                builder.OpenElement(17, "option");
+                builder.AddAttribute(18, "value", "Yes");
+                builder.AddContent(19, "Yes");
                 builder.CloseElement();
 
-                builder.OpenElement(19, "option");
-                builder.AddAttribute(20, "value", "No");
-                builder.AddContent(21, "No");
+                builder.OpenElement(20, "option");
+                builder.AddAttribute(21, "value", "No");
+                builder.AddContent(22, "No");
                 builder.CloseElement();
 
                 builder.CloseElement();
@@ -439,9 +535,10 @@ private void MatchChanged(ChangeEventArgs e)
             {
                 builder.OpenElement(22, "select");
                 builder.AddAttribute(23, "class", "form-select");
-                builder.AddAttribute(24, "value", value);
+                builder.AddAttribute(24, "id", GetFieldInputId(field));
+                builder.AddAttribute(25, "value", value);
                 builder.AddAttribute(
-                    25,
+                    26,
                     "onchange",
                     EventCallback.Factory.Create<ChangeEventArgs>(
                         this,
@@ -453,9 +550,9 @@ private void MatchChanged(ChangeEventArgs e)
                 {
                     foreach (var option in field.Options)
                     {
-                        builder.OpenElement(26, "option");
-                        builder.AddAttribute(27, "value", option.Value);
-                        builder.AddContent(28, option.Value);
+                        builder.OpenElement(27, "option");
+                        builder.AddAttribute(28, "value", option.Value);
+                        builder.AddContent(29, option.Value);
                         builder.CloseElement();
                     }
                 }
@@ -478,10 +575,11 @@ private void MatchChanged(ChangeEventArgs e)
     builder.OpenElement(31, "input");
     builder.AddAttribute(32, "type", "checkbox");
     builder.AddAttribute(33, "class", "form-check-input");
-    builder.AddAttribute(34, "checked", isChecked);
+    builder.AddAttribute(34, "id", GetFieldInputId(field));
+    builder.AddAttribute(35, "checked", isChecked);
 
     builder.AddAttribute(
-        35,
+        36,
         "onchange",
         EventCallback.Factory.Create<ChangeEventArgs>(
             this,
@@ -498,7 +596,8 @@ private void MatchChanged(ChangeEventArgs e)
         37,
         "class",
         "form-check-label");
-    builder.AddContent(38, "Checked");
+    builder.AddAttribute(38, "for", GetFieldInputId(field));
+    builder.AddContent(39, "Checked");
     builder.CloseElement();
 
     builder.CloseElement();
@@ -512,7 +611,7 @@ else if (field.FieldType == 5)
         .ToHashSet();
 
     builder.OpenElement(39, "div");
-    builder.AddAttribute(40, "class", "border rounded p-3");
+    builder.AddAttribute(40, "class", "multi-select-options");
 
     if (field.Options != null)
     {
@@ -527,10 +626,12 @@ else if (field.FieldType == 5)
             builder.OpenElement(43, "input");
             builder.AddAttribute(44, "type", "checkbox");
             builder.AddAttribute(45, "class", "form-check-input");
-            builder.AddAttribute(46, "checked", isSelected);
+            var optionInputId = GetFieldInputId(field, option.Id);
+            builder.AddAttribute(46, "id", optionInputId);
+            builder.AddAttribute(47, "checked", isSelected);
 
             builder.AddAttribute(
-                47,
+                48,
                 "onchange",
                 EventCallback.Factory.Create<ChangeEventArgs>(
                     this,
@@ -546,7 +647,8 @@ else if (field.FieldType == 5)
                 49,
                 "class",
                 "form-check-label");
-            builder.AddContent(50, option.Value);
+            builder.AddAttribute(50, "for", optionInputId);
+            builder.AddContent(51, option.Value);
             builder.CloseElement();
 
             builder.CloseElement();
@@ -555,13 +657,14 @@ else if (field.FieldType == 5)
 
     builder.CloseElement();
 }
-else
+            else
             {
                 builder.OpenElement(39, "input");
                 builder.AddAttribute(40, "class", "form-control");
-                builder.AddAttribute(41, "value", value);
+                builder.AddAttribute(41, "id", GetFieldInputId(field));
+                builder.AddAttribute(42, "value", value);
                 builder.AddAttribute(
-                    42,
+                    43,
                     "oninput",
                     EventCallback.Factory.Create<ChangeEventArgs>(
                         this,
@@ -627,60 +730,58 @@ private void UpdateMultiSelectAnswer(
             errorMessage = "Please enter the scout name.";
             return;
         }
-if (selectedForm.FormType == 1)
-{
-    if (!eventId.HasValue || eventId.Value <= 0)
-    {
-        errorMessage = "Please enter an event ID.";
-        return;
-    }
 
-    if (!matchNumber.HasValue || matchNumber.Value <= 0)
-    {
-        errorMessage = "Please enter a match number.";
-        return;
-    }
-}
+        if (selectedForm.FormType == 1)
+        {
+            if (!eventId.HasValue || eventId.Value <= 0)
+            {
+                errorMessage = "Please select an event.";
+                return;
+            }
 
-foreach (var field in selectedForm.Fields.Where(f => f.Required))
-{
-    // Team Number and Scout Name are handled by the
-    // dedicated inputs above, not the answers dictionary.
-    if (field.Question == "Team Number" ||
-        field.Question == "Scout Name")
-    {
-        continue;
-    }
+            if (!matchNumber.HasValue || matchNumber.Value <= 0)
+            {
+                errorMessage = "Please select a match.";
+                return;
+            }
+        }
 
-    if (!answers.TryGetValue(field.Id, out var value) ||
-        string.IsNullOrWhiteSpace(value))
-    {
-        errorMessage =
-            $"Please answer the required question: {field.Question}";
-        return;
-    }
-}        isSubmitting = true;
+        foreach (var field in selectedForm.Fields.Where(field => field.Required))
+        {
+            // Team Number and Scout Name are handled by the dedicated inputs above.
+            if (field.Question == "Team Number" || field.Question == "Scout Name")
+            {
+                continue;
+            }
+
+            if (!answers.TryGetValue(field.Id, out var value) || string.IsNullOrWhiteSpace(value))
+            {
+                errorMessage = $"Please answer the required question: {field.Question}";
+                return;
+            }
+        }
+
+        isSubmitting = true;
 
         try
         {
-var request = new
-{
-    gameFormId = selectedForm.Id,
-    teamNumber,
-    scoutName,
-    eventId,
-    matchNumber,
-    setNumber,
-    matchType,
-    answers = answers.Select(a => new
-    {
-        gameFormFieldId = a.Key,
-        value = a.Value
-    }).ToList()
-};
-           var response = await Http.PostAsJsonAsync(
-    "api/GameFormSubmissions/scout",
-    request);
+            var request = new
+            {
+                gameFormId = selectedForm.Id,
+                teamNumber,
+                scoutName,
+                eventId,
+                matchNumber,
+                setNumber,
+                matchType,
+                answers = answers.Select(answer => new
+                {
+                    gameFormFieldId = answer.Key,
+                    value = answer.Value
+                }).ToList()
+            };
+
+            var response = await Http.PostAsJsonAsync("api/GameFormSubmissions/scout", request);
 
             if (response.IsSuccessStatusCode)
             {
@@ -689,9 +790,16 @@ var request = new
             }
             else
             {
-                errorMessage =
-                    await response.Content.ReadAsStringAsync();
+                errorMessage = await response.Content.ReadAsStringAsync();
             }
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Could not send the scouting submission. Check the API connection and try again.";
+        }
+        catch (TaskCanceledException)
+        {
+            errorMessage = "The server took too long to save this submission. Try again.";
         }
         finally
         {
