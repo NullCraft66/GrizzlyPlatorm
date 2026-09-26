@@ -4,62 +4,64 @@
 <PageTitle>GrizzlyPlatform</PageTitle>
 
 <div class="grizzly-home">
-    <div class="home-logo-wrap"><img src="images/grizzly-logo.png" alt="Grizzly Robotics" class="home-logo" /></div><h1>Grizzly Robotics</h1>
-
-    <p class="home-tagline">
-        Robotics scouting and event management platform
-    </p>
+    <header class="home-hero">
+        <div class="home-logo-wrap">
+            <img src="images/grizzly-logo.png" alt="Grizzly Platform logo" class="home-logo" />
+        </div>
+        <h1>Grizzly Robotics</h1>
+        <p class="home-tagline">Robotics scouting and event management platform</p>
+    </header>
 
     @if (events == null)
     {
-        <p>Loading...</p>
+        <p class="home-loading" role="status">Loading platform overview…</p>
     }
     else
     {
         @if (events.Any(IsCompetitionDay))
-    {
-        <div class="competition-message">Good luck at competition today, Grizzly Robotics!</div>
-    }
+        {
+            <div class="competition-message" role="status">Good luck at competition today, Grizzly Robotics!</div>
+        }
 
-    <div class="dashboard-grid">
+        <section class="dashboard-grid" aria-label="Platform overview">
 
-            <div class="dashboard-card">
+            <article class="dashboard-card">
                 <h2>Events</h2>
-                <p class="number">@events.Count</p>
+                <p class="number event-count">@events.Count</p>
                 <NavLink class="dashboard-button" href="events">
                     View Events
                 </NavLink>
-            </div>
+            </article>
 
-            <div class="dashboard-card">
+            <article class="dashboard-card">
                 <h2>Current Season</h2>
 
                 @if (events.Count > 0 && events[0].Season is not null)
                 {
                     <p class="number">@events[0].Season!.Name</p>
-                    <p>@events[0].Season!.Year</p>
+                    <p class="dashboard-detail">@events[0].Season!.Year</p>
                 }
                 else
                 {
-                    <p>No season data</p>
+                    <p class="dashboard-detail">No season data</p>
                 }
-            </div>
+            </article>
 
-            <div class="dashboard-card">
+            <article class="dashboard-card">
                 <h2>Latest Event</h2>
 
                 @if (events.Count > 0)
                 {
                     <p class="number">@events[0].Name</p>
-                    <p>@events[0].Location</p>
+                    <p class="dashboard-detail">@events[0].Location</p>
                 }
                 else
                 {
-                    <p>No events</p>
+                    <p class="dashboard-detail">No events</p>
                 }
-            </div>
+            </article>
 
-        </div>
+        </section>
     }
 </div>
 
@@ -99,7 +101,5 @@
         public string Name { get; set; } = "";
     }
 }
-
-
 
 
