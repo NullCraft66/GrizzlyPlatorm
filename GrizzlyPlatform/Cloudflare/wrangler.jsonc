@@ -1,0 +1,62 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "grizzly-platform",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-26",
+  "secrets": {
+    "required": ["NEXUS_SETTINGS_ENCRYPTION_KEY", "TBA_API_KEY"]
+  },
+  "vars": {
+    "PUBLIC_HOST_NAME": "GrizzlyPlatform"
+  },
+  "assets": {
+    "directory": "./dist/wwwroot",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "ratelimits": [
+    {
+      "name": "LOGIN_RATE_LIMITER",
+      // Replace with an integer namespace ID unique to the Cloudflare account before deploying.
+      "namespace_id": "8126001",
+      "simple": {
+        "limit": 10,
+        "period": 60
+      }
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "grizzly-platform",
+      // Replace this local-development placeholder with the D1 database ID before deploying.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "queues": {
+    "producers": [
+      {
+        "binding": "EVENT_SYNC_QUEUE",
+        "queue": "grizzly-event-sync"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "grizzly-event-sync",
+        "max_batch_size": 1,
+        "max_batch_timeout": 1,
+        "max_retries": 3,
+        "max_concurrency": 1,
+        "dead_letter_queue": "grizzly-event-sync-dlq"
+      },
+      {
+        "queue": "grizzly-event-sync-dlq",
+        "max_batch_size": 10,
+        "max_retries": 1,
+        "max_concurrency": 1
+      }
+    ]
+  }
+}

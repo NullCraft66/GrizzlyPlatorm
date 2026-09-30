@@ -1,0 +1,60 @@
+-- Team/event-roster/match reads used by team details and scouting workflows.
+CREATE TABLE IF NOT EXISTS Teams (
+  Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  TeamNumber INTEGER NOT NULL,
+  Name TEXT NOT NULL,
+  Location TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS EventTeams (
+  Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  EventId INTEGER NOT NULL,
+  TeamId INTEGER NOT NULL,
+  CONSTRAINT FK_EventTeams_Events_EventId
+    FOREIGN KEY (EventId) REFERENCES Events (Id) ON DELETE CASCADE,
+  CONSTRAINT FK_EventTeams_Teams_TeamId
+    FOREIGN KEY (TeamId) REFERENCES Teams (Id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS IX_EventTeams_EventId ON EventTeams (EventId);
+CREATE INDEX IF NOT EXISTS IX_EventTeams_TeamId ON EventTeams (TeamId);
+
+CREATE TABLE IF NOT EXISTS Matches (
+  Id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  EventId INTEGER NOT NULL,
+  MatchType TEXT NOT NULL DEFAULT 'Qualification',
+  MatchNumber INTEGER NOT NULL,
+  SetNumber INTEGER NOT NULL,
+  RedScore INTEGER NULL,
+  BlueScore INTEGER NULL,
+  WinningAlliance TEXT NULL,
+  RedTeam1Id INTEGER NOT NULL,
+  RedTeam2Id INTEGER NOT NULL,
+  RedTeam3Id INTEGER NOT NULL,
+  BlueTeam1Id INTEGER NOT NULL,
+  BlueTeam2Id INTEGER NOT NULL,
+  BlueTeam3Id INTEGER NOT NULL,
+  CONSTRAINT FK_Matches_Events_EventId
+    FOREIGN KEY (EventId) REFERENCES Events (Id) ON DELETE CASCADE,
+  CONSTRAINT FK_Matches_Teams_RedTeam1Id
+    FOREIGN KEY (RedTeam1Id) REFERENCES Teams (Id) ON DELETE RESTRICT,
+  CONSTRAINT FK_Matches_Teams_RedTeam2Id
+    FOREIGN KEY (RedTeam2Id) REFERENCES Teams (Id) ON DELETE RESTRICT,
+  CONSTRAINT FK_Matches_Teams_RedTeam3Id
+    FOREIGN KEY (RedTeam3Id) REFERENCES Teams (Id) ON DELETE RESTRICT,
+  CONSTRAINT FK_Matches_Teams_BlueTeam1Id
+    FOREIGN KEY (BlueTeam1Id) REFERENCES Teams (Id) ON DELETE RESTRICT,
+  CONSTRAINT FK_Matches_Teams_BlueTeam2Id
+    FOREIGN KEY (BlueTeam2Id) REFERENCES Teams (Id) ON DELETE RESTRICT,
+  CONSTRAINT FK_Matches_Teams_BlueTeam3Id
+    FOREIGN KEY (BlueTeam3Id) REFERENCES Teams (Id) ON DELETE RESTRICT
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS IX_Matches_EventId_MatchType_MatchNumber_SetNumber
+  ON Matches (EventId, MatchType, MatchNumber, SetNumber);
+CREATE INDEX IF NOT EXISTS IX_Matches_RedTeam1Id ON Matches (RedTeam1Id);
+CREATE INDEX IF NOT EXISTS IX_Matches_RedTeam2Id ON Matches (RedTeam2Id);
+CREATE INDEX IF NOT EXISTS IX_Matches_RedTeam3Id ON Matches (RedTeam3Id);
+CREATE INDEX IF NOT EXISTS IX_Matches_BlueTeam1Id ON Matches (BlueTeam1Id);
+CREATE INDEX IF NOT EXISTS IX_Matches_BlueTeam2Id ON Matches (BlueTeam2Id);
+CREATE INDEX IF NOT EXISTS IX_Matches_BlueTeam3Id ON Matches (BlueTeam3Id);

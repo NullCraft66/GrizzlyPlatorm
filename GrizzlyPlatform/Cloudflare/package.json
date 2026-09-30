@@ -1,0 +1,18 @@
+{
+  "name": "grizzly-platform-cloudflare",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:web": "dotnet publish ../GrizzlyPlatform.Web/GrizzlyPlatform.Web.csproj --configuration Release --output ./dist",
+    "dev": "npm run build:web && wrangler dev",
+    "types": "wrangler types",
+    "db:migrate:local": "wrangler d1 migrations apply grizzly-platform --local",
+    "test": "node --experimental-strip-types --test src/index.test.mjs src/alliance-selection.integration.test.mjs",
+    "verify": "node --max-old-space-size=512 ./node_modules/typescript/bin/tsc --noEmit && npm test && npm run build:web",
+    "typecheck": "node --max-old-space-size=768 ./node_modules/typescript/bin/tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2",
+    "wrangler": "4.144.0"
+  }
+}

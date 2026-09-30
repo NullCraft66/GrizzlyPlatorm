@@ -1,0 +1,3 @@
+# Copy this file to .dev.vars and replace both placeholder values.
+NEXUS_SETTINGS_ENCRYPTION_KEY="replace-with-a-base64-encoded-32-byte-key"
+TBA_API_KEY="replace-with-your-The-Blue-Alliance-v3-auth-key"
