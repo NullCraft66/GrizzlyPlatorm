@@ -1,0 +1,166 @@
+@page "/account-management"
+@rendermode InteractiveServer
+@using System.Net.Http.Json
+@using Microsoft.AspNetCore.Components.Forms
+@inject HttpClient Http
+@inject GrizzlyPlatform.Web.Services.AuthState AuthState
+
+<PageTitle>Account Management</PageTitle>
+
+@if (!AuthState.IsAdmin)
+{
+    <h1>Administrator access required</h1>
+}
+else
+{
+    <h1>Account Management</h1>
+    <p>Create accounts for team members. Passwords are hashed by the API.</p>
+
+    <div class="card p-3 mb-4">
+        <h2>Import / export accounts</h2>
+        <p class="mb-2">Export creates a safe template with blank passwords. Fill passwords in before importing.</p>
+        <div class="d-flex gap-2 align-items-center">
+            <a class="btn btn-outline-secondary" href="api/Auth/seed" download="account-seed.json">Export seed file</a>
+            <InputFile OnChange="ImportSeed" accept=".json,application/json" />
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(message))
+    {
+        <div class="alert @(isError ? "alert-danger" : "alert-success")">@message</div>
+    }
+
+    <div class="card p-3 mb-4">
+        <h2>Create account</h2>
+        <div class="row g-2">
+            <div class="col-md-3"><input class="form-control" placeholder="Username" @bind="username" /></div>
+            <div class="col-md-3"><input class="form-control" placeholder="Display name" @bind="displayName" /></div>
+            <div class="col-md-3"><input class="form-control" type="password" placeholder="Password" @bind="password" /></div>
+            <div class="col-md-2"><select class="form-select" @bind="role"><option>Scout</option><option>Viewer</option><option>Admin</option><option>UltimateAdmin</option></select></div>
+            @if (role == "UltimateAdmin")
+            {
+                <div class="col-md-3"><input class="form-control" type="password" placeholder="Ultimate Admin creation password" @bind="ultimateAdminPassword" /></div>
+            }
+            <div class="col-md-1"><button class="btn btn-primary w-100" @onclick="CreateAccount">Add</button></div>
+        </div>
+    </div>
+
+    <div class="card p-3 mb-4">
+        <h2>Role visibility</h2>
+        <p>Select which tabs each role should be allowed to see.</p>
+        @foreach (var group in visibilityGroups)
+        {
+            <div class="mb-3"><h3>@group.Role</h3>
+                @foreach (var tab in availableTabs)
+                {
+                    <label class="me-3"><input type="checkbox" checked="@group.Tabs.Contains(tab.Key)" @onchange="e => SetTab(group, tab.Key, e)" /> @tab.Value</label>
+                }
+            </div>
+        }
+        <button class="btn btn-secondary" @onclick="SaveVisibility">Save visibility settings</button>
+        @if (!string.IsNullOrWhiteSpace(visibilityMessage)) { <span class="ms-2">@visibilityMessage</span> }
+    </div>
+
+    <h2>Existing accounts</h2>
+    @if (users == null)
+    {
+        <p>Loading...</p>
+    }
+    else
+    {
+        <table class="table"><thead><tr><th>Username</th><th>Display name</th><th>Role</th><th>Status</th></tr></thead>
+            <tbody>@foreach (var user in users) { <tr><td>@user.Username</td><td>@user.DisplayName</td><td>@user.Role</td><td>@(user.IsActive ? "Active" : "Disabled")</td></tr> }</tbody>
+        </table>
+    }
+}
+
+@code {
+    private List<AccountRow>? users;
+    private string username = "";
+    private string displayName = "";
+    private string password = "";
+    private string role = "Scout";
+    private string ultimateAdminPassword = "";
+    private string message = "";
+    private bool isError;
+    private string visibilityMessage = "";
+    private readonly Dictionary<string, string> availableTabs = new()
+    {
+        ["home"] = "Home", ["seasons"] = "Seasons", ["events"] = "Events", ["event-operations"] = "Event Operations",
+        ["gameforms"] = "Game Forms", ["device-pairing"] = "Pair Devices", ["device-configuration"] = "Device Configuration",
+        ["nexus"] = "Nexus Settings", ["scouting"] = "Scouting", ["submissions"] = "Submissions",
+        ["appearance"] = "Appearance", ["account-management"] = "Account Management",
+        ["allianceselection"] = "Alliance Selection", ["allianceplan"] = "Alliance Plan"
+    };
+    private readonly List<VisibilityGroup> visibilityGroups = new()
+    {
+        new("Viewer", new HashSet<string>(["home", "seasons", "events"])),
+        new("Scout", new HashSet<string>(["home", "seasons", "events", "scouting"])),
+        new("Admin", new HashSet<string>()),
+        new("UltimateAdmin", new HashSet<string>())
+    };
+
+    private sealed class AccountRow { public string Username { get; set; } = ""; public string DisplayName { get; set; } = ""; public string Role { get; set; } = ""; public bool IsActive { get; set; } }
+
+    protected override async Task OnInitializedAsync() => await LoadUsers();
+
+    private async Task LoadUsers() => users = await Http.GetFromJsonAsync<List<AccountRow>>("api/Auth/users") ?? [];
+
+    private async Task CreateAccount()
+    {
+        isError = false; message = "";
+        var response = await Http.PostAsJsonAsync("api/Auth/users", new { username, displayName, password, role, ultimateAdminPassword });
+        if (response.IsSuccessStatusCode)
+        {
+            message = "Account created."; username = displayName = password = ultimateAdminPassword = ""; role = "Scout"; await LoadUsers();
+        }
+        else { isError = true; message = (await response.Content.ReadFromJsonAsync<ApiMessage>())?.Message ?? "Could not create account."; }
+    }
+
+    private void SetTab(VisibilityGroup group, string key, ChangeEventArgs args)
+    {
+        if (args.Value is true || string.Equals(args.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase)) group.Tabs.Add(key);
+        else group.Tabs.Remove(key);
+    }
+
+    private void SaveVisibility()
+    {
+        foreach (var group in visibilityGroups)
+            AuthState.SetRoleTabs(group.Role, group.Tabs);
+        visibilityMessage = "Visibility settings applied to navigation.";
+    }
+
+    private async Task ImportSeed(InputFileChangeEventArgs args)
+    {
+        try
+        {
+            await using var stream = args.File.OpenReadStream(1024 * 1024);
+            using var reader = new StreamReader(stream);
+            var json = await reader.ReadToEndAsync();
+            var seed = System.Text.Json.JsonSerializer.Deserialize<AccountSeed>(json, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (seed == null) { isError = true; message = "The seed file is invalid."; return; }
+            var response = await Http.PostAsJsonAsync("api/Auth/seed", seed);
+            isError = !response.IsSuccessStatusCode;
+            message = response.IsSuccessStatusCode ? "Seed imported." : "The seed file could not be imported.";
+            await LoadUsers();
+        }
+        catch (Exception ex) { isError = true; message = $"Import failed: {ex.Message}"; }
+    }
+
+    private sealed class ApiMessage { public string Message { get; set; } = ""; }
+    private sealed class VisibilityGroup
+    {
+        public string Role { get; }
+        public HashSet<string> Tabs { get; }
+        public VisibilityGroup(string role, HashSet<string> tabs) { Role = role; Tabs = tabs; }
+    }
+    private sealed class AccountSeed { public List<SeedAccount> Accounts { get; set; } = []; }
+    private sealed class SeedAccount
+    {
+        public string Username { get; set; } = "";
+        public string DisplayName { get; set; } = "";
+        public string Password { get; set; } = "";
+        public string Role { get; set; } = "Scout";
+        public bool UpdateExisting { get; set; }
+    }
+}

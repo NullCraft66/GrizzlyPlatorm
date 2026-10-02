@@ -57,6 +57,7 @@
         public string Username { get; set; } = "";
         public string DisplayName { get; set; } = "";
         public string Role { get; set; } = "";
+        public string AllowedPages { get; set; } = "*";
     }
 
     private async Task PerformLogin()
@@ -97,7 +98,8 @@
         result.Id,
         result.Username,
         result.DisplayName,
-        result.Role);
+        result.Role,
+        result.AllowedPages);
 
     Navigation.NavigateTo("/");
     return;

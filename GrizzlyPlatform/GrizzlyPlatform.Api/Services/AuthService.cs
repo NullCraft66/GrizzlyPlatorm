@@ -63,5 +63,13 @@ public class AuthService
         return result == PasswordVerificationResult.Success ||
                result == PasswordVerificationResult.SuccessRehashNeeded;
     }
+
+    public async Task SaveAsync() => await _context.SaveChangesAsync();
+
+    public async Task SetPasswordAsync(User user, string password)
+    {
+        user.PasswordHash = _passwordHasher.HashPassword(user, password);
+        await _context.SaveChangesAsync();
+    }
 }
 

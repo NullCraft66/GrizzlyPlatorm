@@ -19,4 +19,6 @@ public class User
     public string Role { get; set; } = "Scout";
 
     public bool IsActive { get; set; } = true;
+
+    public string AllowedPages { get; set; } = "*";
 }

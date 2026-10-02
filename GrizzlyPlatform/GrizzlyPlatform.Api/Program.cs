@@ -3,13 +3,16 @@ using GrizzlyPlatform.Api.Models;
 using GrizzlyPlatform.Api.Services;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false);
 
 // Register Entity Framework Core with SQLite.
 builder.Services.AddDbContext<GrizzlyDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("Default") ?? "Data Source=grizzlyplatform.db"));
+    options.UseSqlite(builder.Configuration.GetConnectionString("Default") ?? "Data Source=grizzlyplatform.db")
+        .ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning)));
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddDataProtection();
 builder.Services.AddSingleton<NexusSettingsStore>();
@@ -58,6 +61,7 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<GrizzlyDbContext>();
     await db.Database.MigrateAsync();
+    await db.Database.ExecuteSqlRawAsync("ALTER TABLE Users ADD COLUMN AllowedPages TEXT NOT NULL DEFAULT '*'").ContinueWith(_ => { });
 
     var authService = scope.ServiceProvider
         .GetRequiredService<AuthService>();
@@ -65,26 +69,33 @@ using (var scope = app.Services.CreateScope())
     var configuration = scope.ServiceProvider
         .GetRequiredService<IConfiguration>();
 
-    var adminUsername =
-        configuration["AdminUsername"];
-
-    var adminPassword =
-        configuration["AdminPassword"];
-
-    if (!string.IsNullOrWhiteSpace(adminUsername) &&
-        !string.IsNullOrWhiteSpace(adminPassword))
+    var seedFile = configuration["AccountSeedFile"];
+    if (!string.IsNullOrWhiteSpace(seedFile))
     {
-        var existingAdmin =
-            await authService.FindByUsernameAsync(
-                adminUsername);
+        var seedPath = Path.IsPathRooted(seedFile)
+            ? seedFile
+            : Path.Combine(AppContext.BaseDirectory, seedFile);
 
-        if (existingAdmin == null)
+        if (File.Exists(seedPath))
         {
-            await authService.CreateUserAsync(
-                adminUsername,
-                "Administrator",
-                adminPassword,
-                "Admin");
+            var seed = JsonSerializer.Deserialize<AccountSeed>(
+                await File.ReadAllTextAsync(seedPath),
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            foreach (var account in seed?.Accounts ?? [])
+            {
+                if (string.IsNullOrWhiteSpace(account.Username) || string.IsNullOrWhiteSpace(account.Password))
+                    continue;
+                var existing = await authService.FindByUsernameAsync(account.Username);
+                if (existing == null)
+                    await authService.CreateUserAsync(account.Username, account.DisplayName ?? account.Username, account.Password, account.Role ?? "Scout");
+                else if (account.UpdateExisting)
+                {
+                    existing.DisplayName = account.DisplayName ?? existing.DisplayName;
+                    existing.Role = account.Role ?? existing.Role;
+                    existing.IsActive = true;
+                    await authService.SetPasswordAsync(existing, account.Password);
+                }
+            }
         }
     }
 }
@@ -96,3 +107,13 @@ app.UseCors("ScoutingClients");
 app.MapControllers();
 
 app.Run();
+
+public sealed class AccountSeed { public List<AccountSeedEntry> Accounts { get; set; } = []; }
+public sealed class AccountSeedEntry
+{
+    public string Username { get; set; } = "";
+    public string? DisplayName { get; set; }
+    public string? Password { get; set; }
+    public string? Role { get; set; }
+    public bool UpdateExisting { get; set; }
+}
